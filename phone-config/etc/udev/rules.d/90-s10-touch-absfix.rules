@@ -1,0 +1,1 @@
+ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="sec_touchscreen", SYMLINK+="input/s10-touchscreen", RUN+="/usr/local/bin/s10-touch-absfix $devnode"

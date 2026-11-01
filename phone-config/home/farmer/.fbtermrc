@@ -1,0 +1,15 @@
+# fbterm on the Galaxy S10 (1440x3040, ~550 dpi)
+font-names=JetBrains Mono
+font-size=36
+font-width=
+font-height=
+# 0 = black (true black on AMOLED), 7 = light grey text
+color-foreground=7
+color-background=0
+history-lines=2000
+text-encodings=
+cursor-shape=1
+cursor-interval=0
+word-chars=._-
+screen-rotate=0
+input-method=

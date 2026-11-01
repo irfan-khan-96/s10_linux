@@ -1,0 +1,73 @@
+From e4e19472727f1c9dd471f3adf4c8decb5249c4d1 Mon Sep 17 00:00:00 2001
+From: khan <khan@localhost>
+Date: Sat, 31 Oct 2026 12:04:22 +0100
+Subject: [PATCH 08/18] linux-samsung-beyond1lte-downstream: fix loop direct
+ I/O on 4K block devices
+
+---
+ .../APKBUILD                                  |  4 ++-
+ .../loop-dio-blockdev-bsize.patch             | 25 +++++++++++++++++++
+ 2 files changed, 28 insertions(+), 1 deletion(-)
+ create mode 100644 device/downstream/linux-samsung-beyond1lte-downstream/loop-dio-blockdev-bsize.patch
+
+diff --git a/device/downstream/linux-samsung-beyond1lte-downstream/APKBUILD b/device/downstream/linux-samsung-beyond1lte-downstream/APKBUILD
+index 421e034d6d..e15bb052f3 100644
+--- a/device/downstream/linux-samsung-beyond1lte-downstream/APKBUILD
++++ b/device/downstream/linux-samsung-beyond1lte-downstream/APKBUILD
+@@ -5,7 +5,7 @@
+ maintainer="chiffa <chiffathefoxx@gmail.com>"
+ pkgname=linux-samsung-beyond1lte-downstream
+ pkgver=4.14.316
+-pkgrel=1
++pkgrel=2
+ pkgdesc="Samsung Galaxy S10 downstream kernel fork"
+ arch="aarch64"
+ _carch="arm64"
+@@ -37,6 +37,7 @@ source="
+ 	remove-header-lkc.patch
+ 	fix-check-lxdialog.patch
+ 	selinux_include_generated_headers.patch
++	loop-dio-blockdev-bsize.patch
+ "
+ builddir="$srcdir/$_repository-$_commit"
+ _outdir="out"
+@@ -64,4 +65,5 @@ a4a99dd42d0f687e5f0a46fc0f7dd61ffa5deb06459153befe109bed87cb282ab3d1454836865b78
+ 1872a4d9963f128965ab46b329d448e6b776d373cf99f2b8e11d025aa3e10a0308da19beb715c6bdced0b2c6ef44c47a5c013554a19787a64f8ac58d34bc912f  remove-header-lkc.patch
+ 182be3c596b9cc267ac108d7cf03fc8c328ccc6b36770800e4dcedea8d1bb65e3f5eacf590c2948f58b1418cc60a1670ba77dde8c259e428d158c31b6e1dbaf5  fix-check-lxdialog.patch
+ 6ab9db01d35f7f5cc2c19ebe5f65a7dc479a1c68de587300cdde9a6c759d34610666c72f0f321cd450cf56c13df3b54a774e0f7ebdbf0f8608fbfd66b49d04e7  selinux_include_generated_headers.patch
++3b7a2c7b5821a122a386138f37211d23fb536db67555bc5268c836c3016ca0c742251dbd70cb3b906770709118b8f2619ac0565489a91ee0615e81a08d6b8ab0  loop-dio-blockdev-bsize.patch
+ "
+diff --git a/device/downstream/linux-samsung-beyond1lte-downstream/loop-dio-blockdev-bsize.patch b/device/downstream/linux-samsung-beyond1lte-downstream/loop-dio-blockdev-bsize.patch
+new file mode 100644
+index 0000000000..b250087520
+--- /dev/null
++++ b/device/downstream/linux-samsung-beyond1lte-downstream/loop-dio-blockdev-bsize.patch
+@@ -0,0 +1,25 @@
++loop: use backing block device's logical block size for direct I/O
++
++Without this, direct I/O is enabled for a 512-byte loop device on top of
++4K-sector UFS, and postmarketOS's 'losetup --direct-io=on' subpartitions
++cannot be mounted ('unable to read superblock').
++
++--- a/drivers/block/loop.c	2026-10-31 12:04:06.597914761 +0100
+++++ b/drivers/block/loop.c	2026-10-31 12:04:06.645160261 +0100
++@@ -177,6 +177,16 @@
++ 		sb_bsize = bdev_logical_block_size(inode->i_sb->s_bdev);
++ 		dio_align = sb_bsize - 1;
++ 	}
+++	/*
+++	 * A block device backing file sits on the bdev pseudo filesystem, which
+++	 * has no s_bdev, so use the device's own logical block size. Otherwise
+++	 * direct I/O gets enabled on 4K-sector UFS behind a 512-byte loop device
+++	 * and every unaligned read (e.g. ext4 superblock probing) fails.
+++	 */
+++	if (S_ISBLK(inode->i_mode)) {
+++		sb_bsize = bdev_logical_block_size(I_BDEV(inode));
+++		dio_align = sb_bsize - 1;
+++	}
++ 
++ 	/*
++ 	 * We support direct I/O only if lo_offset is aligned with the
+-- 
+2.53.0
+

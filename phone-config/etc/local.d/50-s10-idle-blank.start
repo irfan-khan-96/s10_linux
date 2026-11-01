@@ -1,0 +1,2 @@
+#!/bin/sh
+pidof -x s10-idle-blank >/dev/null || setsid /usr/local/bin/s10-idle-blank >/dev/null 2>&1 < /dev/null &

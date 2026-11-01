@@ -1,0 +1,51 @@
+From 0dcfa7de82c45b7ffb3f2b7eb3201692b42ab937 Mon Sep 17 00:00:00 2001
+From: khan <khan@localhost>
+Date: Sat, 31 Oct 2026 09:47:16 +0100
+Subject: [PATCH 06/18] device-samsung-beyond1lte-downstream: use RNDIS with
+ Samsung USB IDs
+
+---
+ .../device-samsung-beyond1lte-downstream/APKBUILD          | 4 ++--
+ .../device-samsung-beyond1lte-downstream/deviceinfo        | 7 +++++++
+ 2 files changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/device/downstream/device-samsung-beyond1lte-downstream/APKBUILD b/device/downstream/device-samsung-beyond1lte-downstream/APKBUILD
+index 14950a6898..d9c59153f5 100644
+--- a/device/downstream/device-samsung-beyond1lte-downstream/APKBUILD
++++ b/device/downstream/device-samsung-beyond1lte-downstream/APKBUILD
+@@ -4,7 +4,7 @@ maintainer="chiffa <chiffathefoxx@gmail.com>"
+ pkgname=device-samsung-beyond1lte-downstream
+ pkgdesc="Samsung Galaxy S10 (Downstream)"
+ pkgver=7
+-pkgrel=2
++pkgrel=3
+ url="https://postmarketos.org"
+ license="MIT"
+ arch="aarch64"
+@@ -28,7 +28,7 @@ package() {
+ }
+ 
+ sha512sums="
+-a122d5290a8a365d832cd13b152f44fe6621a2b97beddf825972c29dde8d1fc10ffdd95de29b9d9a43f02b277b8b33586cd612bae2b5ba3fd023b6ce941ba97f  deviceinfo
++6bf925ab5cc63afd99466091e4e489660084cd7ee6966db4db74f8e681b410b130ff0d8ebeb320a8850361810219163ff197e8838fe5efed9fa33274de8fdf99  deviceinfo
+ cb0731b5e71b427024bb47cd70aa48d3be409a89aa476f3fd4dea8e5b42ef87371a65bbe836bca7da04c0384178ad293b44da8a88557ad04fc57857bef502050  kernel-cmdline.conf
+ 03deb65563f4b4421491643854927e88b2d5880b8b19ee6baa4d3fa1ec3f7d7a1c2977fd2c3c41270254efea6fa0c5fdae0a382e7c427d5a3bf6fad34c25375e  initfs-hook.sh
+ "
+diff --git a/device/downstream/device-samsung-beyond1lte-downstream/deviceinfo b/device/downstream/device-samsung-beyond1lte-downstream/deviceinfo
+index a7c851d4dc..9b96aa5fb9 100644
+--- a/device/downstream/device-samsung-beyond1lte-downstream/deviceinfo
++++ b/device/downstream/device-samsung-beyond1lte-downstream/deviceinfo
+@@ -36,3 +36,10 @@ deviceinfo_bootimg_append_seandroidenforce="true"
+ deviceinfo_create_initfs_extra="true"
+ # 4.14 downstream kernel has no zstd initramfs support (only gzip/lz4)
+ deviceinfo_initfs_compression="gzip"
++
++# Samsung's downstream f_ncm never signals link-up to the host (carrier stays 0),
++# so use RNDIS. Samsung's tethering IDs let Windows bind its RNDIS driver
++# instead of the Android ADB driver that claims 18d1:d001.
++deviceinfo_usb_network_function="rndis.usb0"
++deviceinfo_usb_idVendor="0x04e8"
++deviceinfo_usb_idProduct="0x6863"
+-- 
+2.53.0
+

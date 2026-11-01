@@ -1,0 +1,20 @@
+#!/bin/sh
+# Allow SSH from the home LAN and the USB link only; drop all other inbound.
+IPT=/usr/sbin/iptables-legacy
+IP6T=/usr/sbin/ip6tables-legacy
+for t in $IPT $IP6T; do
+	$t -F INPUT; $t -F FORWARD
+	$t -P INPUT DROP; $t -P FORWARD DROP; $t -P OUTPUT ACCEPT
+	$t -A INPUT -i lo -j ACCEPT
+	$t -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+	$t -A INPUT -m conntrack --ctstate INVALID -j DROP
+	$t -A INPUT -i rndis0 -p tcp --dport 22 -j ACCEPT
+done
+$IPT -A INPUT -p icmp -j ACCEPT
+$IPT -A INPUT -i wlan0 -s 192.168.178.0/24 -p tcp --dport 22 -j ACCEPT
+$IPT -A INPUT -i wlan0 -s 192.168.178.0/24 -p tcp --dport 445 -j ACCEPT
+$IPT -A INPUT -i wlan0 -p udp --sport 67 --dport 68 -j ACCEPT
+$IPT -A INPUT -i rndis0 -p udp --dport 67 -j ACCEPT
+$IP6T -A INPUT -p ipv6-icmp -j ACCEPT
+$IP6T -A INPUT -s fe80::/10 -p udp --dport 546 -j ACCEPT
+$IP6T -A INPUT -i wlan0 -s fe80::/10 -p tcp --dport 22 -j ACCEPT

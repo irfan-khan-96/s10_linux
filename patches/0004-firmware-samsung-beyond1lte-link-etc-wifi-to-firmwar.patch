@@ -1,0 +1,37 @@
+From ad0d191a0a05aacf0477ebf90e7aeae19fbf368b Mon Sep 17 00:00:00 2001
+From: khan <khan@localhost>
+Date: Sat, 31 Oct 2026 09:17:40 +0100
+Subject: [PATCH 04/18] firmware-samsung-beyond1lte: link /etc/wifi to firmware
+ dir
+
+---
+ device/downstream/firmware-samsung-beyond1lte/APKBUILD | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/device/downstream/firmware-samsung-beyond1lte/APKBUILD b/device/downstream/firmware-samsung-beyond1lte/APKBUILD
+index f77ea4db51..eeec9d4cbe 100644
+--- a/device/downstream/firmware-samsung-beyond1lte/APKBUILD
++++ b/device/downstream/firmware-samsung-beyond1lte/APKBUILD
+@@ -2,7 +2,7 @@
+ maintainer="chiffa <chiffathefoxx@gmail.com>"
+ pkgname=firmware-samsung-beyond1lte
+ pkgver=1
+-pkgrel=0
++pkgrel=1
+ pkgdesc="Firmware for the Samsung Galaxy S10"
+ url="https://github.com/Linux4/proprietary_vendor_samsung"
+ arch="aarch64"
+@@ -28,6 +28,10 @@ package() {
+ 		 install -Dm644 "$srcdir/$pkgname-$_commit-$file" \
+ 			"$pkgdir/lib/firmware/postmarketos/$file"
+ 	done
++
++	# bcmdhd loads firmware from CONFIG_BCMDHD_FW_PATH (/etc/wifi/...)
++	mkdir -p "$pkgdir"/etc
++	ln -s /lib/firmware/postmarketos "$pkgdir"/etc/wifi
+ }
+ 
+ sha512sums="
+-- 
+2.53.0
+

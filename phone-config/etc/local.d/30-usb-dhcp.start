@@ -1,0 +1,4 @@
+#!/bin/sh
+# rndis0 normally keeps 172.16.42.1 from the initramfs; make sure it has it.
+ip addr show rndis0 2>/dev/null | grep -q 172.16.42.1 || ip addr add 172.16.42.1/16 dev rndis0
+ip link set rndis0 up

@@ -1,0 +1,27 @@
+#!/usr/bin/python3
+# Give Samsung's unnamed axis 0x3e on sec_touchscreen a valid range (EVIOCSABS),
+# because libinput rejects devices with an axis range of [0, -1].
+import fcntl, glob, os, struct, sys
+AXIS = 0x3e
+def eviocsabs(axis):  # _IOW('E', 0xc0 + axis, struct input_absinfo) (6 x s32)
+    return (1 << 30) | (24 << 16) | (ord("E") << 8) | (0xc0 + axis)
+def eviocgabs(axis):  # _IOR('E', 0x40 + axis, struct input_absinfo)
+    return (2 << 30) | (24 << 16) | (ord("E") << 8) | (0x40 + axis)
+devs = sys.argv[1:] or glob.glob("/dev/input/event*")
+for dev in devs:
+    try:
+        name = open(f"/sys/class/input/{os.path.basename(dev)}/device/name").read().strip()
+    except OSError:
+        continue
+    if name != "sec_touchscreen":
+        continue
+    fd = os.open(dev, os.O_RDWR)
+    buf = bytearray(24)
+    fcntl.ioctl(fd, eviocgabs(AXIS), buf)
+    value, lo, hi = struct.unpack_from("3i", buf)
+    if hi < lo or hi == lo:
+        fcntl.ioctl(fd, eviocsabs(AXIS), struct.pack("6i", value, 0, 1, 0, 0, 0))
+        print(f"{dev}: axis 0x3e range [{lo}, {hi}] -> [0, 1]")
+    else:
+        print(f"{dev}: axis 0x3e already [{lo}, {hi}]")
+    os.close(fd)

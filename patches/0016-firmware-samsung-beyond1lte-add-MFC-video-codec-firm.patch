@@ -1,0 +1,43 @@
+From e42a7a2e65af345c1ebd85c5729e7d6056723ae6 Mon Sep 17 00:00:00 2001
+From: khan <khan@localhost>
+Date: Sun, 1 Nov 2026 19:11:46 +0100
+Subject: [PATCH 16/18] firmware-samsung-beyond1lte: add MFC video codec
+ firmware (fixes 3-min boot)
+
+---
+ device/downstream/firmware-samsung-beyond1lte/APKBUILD | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/device/downstream/firmware-samsung-beyond1lte/APKBUILD b/device/downstream/firmware-samsung-beyond1lte/APKBUILD
+index eeec9d4cbe..122f05ea8f 100644
+--- a/device/downstream/firmware-samsung-beyond1lte/APKBUILD
++++ b/device/downstream/firmware-samsung-beyond1lte/APKBUILD
+@@ -2,7 +2,7 @@
+ maintainer="chiffa <chiffathefoxx@gmail.com>"
+ pkgname=firmware-samsung-beyond1lte
+ pkgver=1
+-pkgrel=1
++pkgrel=2
+ pkgdesc="Firmware for the Samsung Galaxy S10"
+ url="https://github.com/Linux4/proprietary_vendor_samsung"
+ arch="aarch64"
+@@ -11,7 +11,7 @@ options="!check !archcheck !strip !spdx !tracedeps pmb:cross-native"
+ 
+ # Source
+ _commit="05c9ef8f16e0ad5ab274e408c120dfd99fd5c628"
+-_wifi_files_common="bcmdhd_mfg.bin_b1 bcmdhd_mon.bin_b1 bcmdhd_sta.bin_b1 nvram.txt_ES00_semco_b0 nvram.txt_ES01_semco_b0 nvram.txt_ES02_semco_b0"
++_wifi_files_common="mfc_fw.bin bcmdhd_mfg.bin_b1 bcmdhd_mon.bin_b1 bcmdhd_sta.bin_b1 nvram.txt_ES00_semco_b0 nvram.txt_ES01_semco_b0 nvram.txt_ES02_semco_b0"
+ _wifi_files_device="bcmdhd_clm.blob nvram.txt_1rh_es11_b0 nvram.txt_1rh_es12_b0 nvram.txt_1rh_es13_b0 nvram.txt_1rh_es43_b1 nvram.txt_CS01_semco_b1 nvram.txt_ES03_semco_b0"
+ 
+ for _file in $_wifi_files_common; do
+@@ -35,6 +35,7 @@ package() {
+ }
+ 
+ sha512sums="
++736075827e022d3db7b23c3a3650b6267da1f1cc9c52a441b9e0acc1fc56e62ad37b9906be4e33ca374e3cc29724375f54c6181e88a6a7071b14cdf30d927396  firmware-samsung-beyond1lte-05c9ef8f16e0ad5ab274e408c120dfd99fd5c628-mfc_fw.bin
+ ff316607a30a93790bcddf267713419599f717e561ee61869eaa2ea0d4783702c7132a9534461a791d07ef6cfc86ca58e484dc4ab0a84ff4c2409b85e499139e  firmware-samsung-beyond1lte-05c9ef8f16e0ad5ab274e408c120dfd99fd5c628-bcmdhd_mfg.bin_b1
+ 6016bb808d4467ee7f49dc8ce7449518cf02c282bfe7da6081db481c57ed504f82a3833434966a18d95acbd74c94ffcf6e74b69a13be85e15514f21efd2acbdd  firmware-samsung-beyond1lte-05c9ef8f16e0ad5ab274e408c120dfd99fd5c628-bcmdhd_mon.bin_b1
+ 3e8042abba00394269a8ae30f4017ff3717753204d18b4051ea0b3adb94837bd2aed8417d7ff39daf2732750b5e927eb66a15554a82d8818c52301c17b459b26  firmware-samsung-beyond1lte-05c9ef8f16e0ad5ab274e408c120dfd99fd5c628-bcmdhd_sta.bin_b1
+-- 
+2.53.0
+
