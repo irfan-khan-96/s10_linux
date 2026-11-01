@@ -3,7 +3,7 @@
 # of /dev/fb0 that fbterm leaves free (FBTERM_RESERVE_BOTTOM), reads the
 # touchscreen directly and types through a uinput virtual keyboard.
 # Drawing goes through mmap: Samsung's decon driver ignores write() on fb0.
-import fcntl, mmap, os, select, struct, time
+import fcntl, glob, mmap, os, select, struct, subprocess, time
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
@@ -151,6 +151,74 @@ class Keyboard:
         except OSError:
             pass
 
+HIDDEN = "/run/s10-osk-hidden"              # read by s10-term: full-height terminal
+KEY_VOLUMEDOWN = 114
+
+def hardware_keyboard():
+    """True if a USB keyboard (with letter keys) is plugged in."""
+    for dev in glob.glob("/sys/class/input/event*/device"):
+        try:
+            if int(open(dev + "/id/bustype").read(), 16) != 0x03:   # BUS_USB
+                continue
+            words = open(dev + "/capabilities/key").read().split()
+            bits = int("".join(w.zfill(16) for w in words), 16)
+            if bits >> 30 & 1 and bits >> 44 & 1:                    # KEY_A and KEY_Z
+                return True
+        except (OSError, ValueError):
+            pass
+    return False
+
+class Visibility:
+    """Hide the keyboard while a USB keyboard is attached; Volume Down toggles.
+    Changing it restarts fbterm (inittab respawns s10-term, tmux reattaches)."""
+    def __init__(self, kb):
+        self.kb, self.manual, self.next_scan = kb, None, 0
+        self.usb = hardware_keyboard()
+        self.visible = not os.path.exists(HIDDEN)      # what the running terminal uses
+        self.keys_fd = None
+        for dev in glob.glob("/sys/class/input/event*"):
+            try:
+                if open(dev + "/device/name").read().strip() == "gpio_keys":
+                    self.keys_fd = os.open("/dev/input/" + os.path.basename(dev), os.O_RDONLY)
+            except OSError:
+                pass
+        self.apply(not self.usb, restart_terminal=False)
+        if not self.visible:
+            self.kb.fb[TOP * LL:(TOP + KB_H) * LL] = bytes(KB_H * LL)
+
+    def poll(self, now):
+        if now < self.next_scan:
+            return
+        self.next_scan = now + 2
+        usb = hardware_keyboard()
+        if usb != self.usb:
+            self.usb, self.manual = usb, None          # plugging in or out resets the toggle
+            self.apply(not usb)
+
+    def on_button(self, now):
+        data = os.read(self.keys_fd, 24 * 16)
+        for i in range(0, len(data), 24):
+            _, _, etype, code, value = struct.unpack("qqHHi", data[i:i + 24])
+            if etype == 1 and code == KEY_VOLUMEDOWN and value == 1 and not screen_waking(now):
+                self.manual = not self.visible
+                self.apply(self.manual)
+
+    def apply(self, visible, restart_terminal=True):
+        if visible == self.visible and not restart_terminal:
+            return
+        changed = visible != self.visible
+        self.visible = visible
+        if visible:
+            if os.path.exists(HIDDEN): os.remove(HIDDEN)
+        else:
+            open(HIDDEN, "w").close()
+            self.kb.fb[TOP * LL:(TOP + KB_H) * LL] = bytes(KB_H * LL)   # clear the strip
+        if changed or restart_terminal:
+            subprocess.run(["pkill", "-x", "fbterm"])     # inittab restarts s10-term
+        if visible:
+            time.sleep(1.2)                                # let fbterm come back, then draw
+            self.kb.draw()
+
 def screen_waking(now):
     """True while the screen is off or was woken less than 0.7 s ago."""
     try:
@@ -163,20 +231,27 @@ def screen_waking(now):
 
 def main():
     kb = Keyboard()
+    vis = Visibility(kb)
     tfd = os.open(TOUCH, os.O_RDONLY)
     x = y = None
     down, down_since, last_repeat, slot = False, 0, 0, 0
     tracking = {}
     while True:
-        timeout = 0.03 if kb.pressed in REPEATABLE else None
-        r, _, _ = select.select([tfd], [], [], timeout)
+        timeout = 0.03 if kb.pressed in REPEATABLE else 2.0
+        fds = [tfd] + ([vis.keys_fd] if vis.keys_fd is not None else [])
+        r, _, _ = select.select(fds, [], [], timeout)
         now = time.monotonic()
-        if not r:
+        vis.poll(now)
+        if vis.keys_fd is not None and vis.keys_fd in r:
+            vis.on_button(now)
+        if tfd not in r:
             # key repeat for held Backspace / arrows / space
             if kb.pressed and now - down_since > 0.45 and now - last_repeat > 0.06:
                 kb.press(kb.pressed); last_repeat = now
             continue
         data = os.read(tfd, 24 * 64)
+        if not vis.visible:
+            continue
         for i in range(0, len(data), 24):
             _, _, etype, code, value = struct.unpack("qqHHi", data[i:i + 24])
             if etype == 3:                                  # EV_ABS
