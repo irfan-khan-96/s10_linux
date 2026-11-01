@@ -1,7 +1,7 @@
 From c5d28016cc6eae200e9e0c9b9c480dd1339d0c51 Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Sun, 1 Nov 2026 22:46:43 +0100
-Subject: [PATCH 22/24] s10-terminal: plain fbterm dependency (pmbootstrap
+Subject: [PATCH 22/28] s10-terminal: plain fbterm dependency (pmbootstrap
  cannot resolve versioned local deps)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

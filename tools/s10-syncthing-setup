@@ -1,0 +1,20 @@
+#!/bin/sh
+# Run as the phone user once Syncthing is up: keep it on the home network only
+# and make sure the shared folders exist. Safe to run again.
+H="$HOME/.config/syncthing"
+st() { syncthing cli --home="$H" "$@"; }
+mkdir -p "$HOME/notes" "$HOME/journal"
+st config options global-ann-enabled set false
+st config options relays-enabled set false
+st config options natenabled set false
+st config options uraccepted set -- -1
+st config options auto-upgrade-intervalh set 0
+# crash reporting has no cli option; use the local REST API
+python3 - "$(st config gui apikey get)" <<'EOF'
+import sys, urllib.request
+req = urllib.request.Request("http://127.0.0.1:8384/rest/config/options", method="PATCH",
+    data=b'{"crashReportingEnabled": false}',
+    headers={"X-API-Key": sys.argv[1], "Content-Type": "application/json"})
+urllib.request.urlopen(req)
+EOF
+echo "Device ID: $(st show system | sed -n 's/.*"myID": "\(.*\)".*/\1/p')"

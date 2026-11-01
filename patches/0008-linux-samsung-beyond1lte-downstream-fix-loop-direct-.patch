@@ -1,7 +1,7 @@
 From e4e19472727f1c9dd471f3adf4c8decb5249c4d1 Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Sat, 31 Oct 2026 12:04:22 +0100
-Subject: [PATCH 08/24] linux-samsung-beyond1lte-downstream: fix loop direct
+Subject: [PATCH 08/28] linux-samsung-beyond1lte-downstream: fix loop direct
  I/O on 4K block devices
 
 ---
