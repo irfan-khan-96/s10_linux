@@ -72,8 +72,5 @@ sub("fbterm.cpp", "\tcase SIGCHLD:\n", """\tcase SIGWINCH: {
 
 \tcase SIGCHLD:
 """)
-s = open(S + "fbterm.cpp").read()
-if "<stdio.h>" not in s:
-    s = s.replace("#include <signal.h>\n", "#include <signal.h>\n#include <stdio.h>\n#include <stdlib.h>\n", 1)
-    open(S + "fbterm.cpp", "w").write(s)
+sub("fbterm.cpp", "#include <signal.h>\n", "#include <signal.h>\n#include <stdio.h>\n#include <stdlib.h>\n")
 print("OK")
