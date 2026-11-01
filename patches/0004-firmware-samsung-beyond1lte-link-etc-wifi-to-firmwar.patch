@@ -1,7 +1,7 @@
 From ad0d191a0a05aacf0477ebf90e7aeae19fbf368b Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Sat, 31 Oct 2026 09:17:40 +0100
-Subject: [PATCH 04/18] firmware-samsung-beyond1lte: link /etc/wifi to firmware
+Subject: [PATCH 04/20] firmware-samsung-beyond1lte: link /etc/wifi to firmware
  dir
 
 ---
