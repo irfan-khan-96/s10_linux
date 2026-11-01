@@ -1,16 +1,13 @@
 #!/bin/bash
+# Unpack fbterm 1.7 + Debian patches + our patches into ~/fbterm-src for reading/patching.
 set -e
-mkdir -p ~/s10-fbterm && cd ~/s10-fbterm
-B=https://deb.debian.org/debian/pool/main/f/fbterm
-for f in fbterm_1.7.orig.tar.gz fbterm_1.7-5.debian.tar.xz; do
-  [ -f $f ] || curl -fsSLO "$B/$f"
-done
-ls -la
-tar -tzf fbterm_1.7.orig.tar.gz | head -3
-tar -tJf fbterm_1.7-5.debian.tar.xz | grep patches
-sha512sum fbterm_1.7.orig.tar.gz fbterm_1.7-5.debian.tar.xz
-rm -rf x && mkdir x && tar -xJf fbterm_1.7-5.debian.tar.xz -C x
-for p in $(cat x/debian/patches/series); do echo "== $p"; grep -E '^(\+\+\+|---) ' x/debian/patches/$p | head -4; done
-tar -xzf fbterm_1.7.orig.tar.gz -C x
-d=$(ls -d x/fbterm-*)
-echo "== musl concerns"; grep -rn "execinfo\|sys/io.h\|ioperm\|iopl\|backtrace" $d/src | head
+D=~/.local/var/pmbootstrap/cache_distfiles
+P=~/.local/var/pmbootstrap/cache_git/pmaports/main/fbterm
+rm -rf ~/fbterm-src && mkdir ~/fbterm-src && cd ~/fbterm-src
+tar xzf $D/fbterm_1.7.orig.tar.gz && tar xJf $D/fbterm_1.7-5.debian.tar.xz
+cd fbterm-1.7
+for p in $(cat ../debian/patches/series); do patch -sp1 -i ../debian/patches/$p; done
+patch -sp1 -i $P/musl-compat.patch; patch -sp1 -i $P/reserve-bottom.patch
+git init -q && git add -A && git -c user.name=x -c user.email=x@x commit -qm base
+ls src
+grep -n "SIGWINCH\|signal\|SIG" src/*.cpp src/lib/*.cpp | head -40

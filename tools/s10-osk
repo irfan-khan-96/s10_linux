@@ -151,8 +151,16 @@ class Keyboard:
         except OSError:
             pass
 
-HIDDEN = "/run/s10-osk-hidden"              # read by s10-term: full-height terminal
+RESERVE = "/run/s10-osk-reserve"     # pixels fbterm leaves free (FBTERM_RESERVE_FILE)
+SHOWN, HIDDEN_PX = KB_H, 1            # 1, not 0: fbterm keeps scrolling by redraw
 KEY_VOLUMEDOWN = 114
+
+def reserved():
+    try:
+        with open(RESERVE) as f:
+            return int(f.read())
+    except (OSError, ValueError):
+        return SHOWN
 
 def hardware_keyboard():
     """True if a USB keyboard (with letter keys) is plugged in."""
@@ -170,11 +178,11 @@ def hardware_keyboard():
 
 class Visibility:
     """Hide the keyboard while a USB keyboard is attached; Volume Down toggles.
-    Changing it restarts fbterm (inittab respawns s10-term, tmux reattaches)."""
+    fbterm resizes in place on SIGWINCH after reading RESERVE."""
     def __init__(self, kb):
         self.kb, self.manual, self.next_scan = kb, None, 0
         self.usb = hardware_keyboard()
-        self.visible = not os.path.exists(HIDDEN)      # what the running terminal uses
+        self.visible = reserved() != HIDDEN_PX          # what the running terminal uses
         self.keys_fd = None
         for dev in glob.glob("/sys/class/input/event*"):
             try:
@@ -182,9 +190,10 @@ class Visibility:
                     self.keys_fd = os.open("/dev/input/" + os.path.basename(dev), os.O_RDONLY)
             except OSError:
                 pass
-        self.apply(not self.usb, restart_terminal=False)
-        if not self.visible:
-            self.kb.fb[TOP * LL:(TOP + KB_H) * LL] = bytes(KB_H * LL)
+        if self.visible == self.usb:
+            self.apply(not self.usb)
+        elif not self.visible:
+            self.kb.fb[TOP * LL:(TOP + KB_H) * LL] = bytes(KB_H * LL)   # Keyboard() drew it
 
     def poll(self, now):
         if now < self.next_scan:
@@ -203,20 +212,15 @@ class Visibility:
                 self.manual = not self.visible
                 self.apply(self.manual)
 
-    def apply(self, visible, restart_terminal=True):
-        if visible == self.visible and not restart_terminal:
-            return
-        changed = visible != self.visible
+    def apply(self, visible):
         self.visible = visible
-        if visible:
-            if os.path.exists(HIDDEN): os.remove(HIDDEN)
-        else:
-            open(HIDDEN, "w").close()
+        with open(RESERVE, "w") as f:
+            f.write(str(SHOWN if visible else HIDDEN_PX))
+        if not visible:
             self.kb.fb[TOP * LL:(TOP + KB_H) * LL] = bytes(KB_H * LL)   # clear the strip
-        if changed or restart_terminal:
-            subprocess.run(["pkill", "-x", "fbterm"])     # inittab restarts s10-term
+        subprocess.run(["pkill", "-WINCH", "-x", "fbterm"])  # fbterm re-reads RESERVE
         if visible:
-            time.sleep(1.2)                                # let fbterm come back, then draw
+            time.sleep(0.05)                               # let fbterm stop drawing there
             self.kb.draw()
 
 def screen_waking(now):
