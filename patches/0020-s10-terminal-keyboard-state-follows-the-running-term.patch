@@ -1,7 +1,7 @@
 From 645c2a83a62d7ef2d8f168bf1280c6fbefd76db5 Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Sun, 1 Nov 2026 22:13:41 +0100
-Subject: [PATCH 20/28] s10-terminal: keyboard state follows the running
+Subject: [PATCH 20/29] s10-terminal: keyboard state follows the running
  terminal at startup
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

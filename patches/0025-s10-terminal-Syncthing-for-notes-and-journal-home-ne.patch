@@ -1,7 +1,7 @@
 From 5aec0053e2923c5b2d979c5e2c33d5386999eb31 Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Sun, 1 Nov 2026 23:22:38 +0100
-Subject: [PATCH 25/28] s10-terminal: Syncthing for notes and journal, home
+Subject: [PATCH 25/29] s10-terminal: Syncthing for notes and journal, home
  network only
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
