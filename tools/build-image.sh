@@ -21,4 +21,5 @@ grep -q 'mnt/install/home/.*/.ssh/authorized_keys' ~/.local/var/pmbootstrap/log.
 ./pmbootstrap.py export
 mkdir -p "$OUT"
 cp -L /tmp/postmarketOS-export/boot.img /tmp/postmarketOS-export/samsung-beyond1lte-downstream.img "$OUT"/
+(cd "$OUT" && sha256sum boot.img samsung-beyond1lte-downstream.img > SHA256SUMS)
 ls -lh "$OUT"
