@@ -1,0 +1,113 @@
+#!/usr/bin/python3
+# Launcher for the S10 terminal: lives in tmux window "menu"; each app opens in
+# its own tmux window (or is brought back if it is already open). Alt+m returns here.
+import curses, datetime, os, socket, subprocess
+
+HOME = os.path.expanduser("~")
+
+def journal_today():
+    os.makedirs(f"{HOME}/journal", exist_ok=True)
+    path = f"{HOME}/journal/{datetime.date.today():%Y-%m-%d}.md"
+    if not os.path.exists(path):
+        with open(path, "w") as f:
+            f.write(f"# {datetime.date.today():%A %d %B %Y}\n\n")
+    return f"nvim + {path}"
+
+def notes():
+    os.makedirs(f"{HOME}/notes", exist_ok=True)
+    return f"cd {HOME}/notes && nvim ."
+
+ITEMS = [  # key, label, window name, command (str, or function returning one)
+    ("1", "Notes",   "notes",   notes),
+    ("2", "Journal", "journal", journal_today),
+    ("3", "Write",   "write",   "wordgrinder"),
+    ("4", "Shell",   None,      None),          # always a new shell window
+    ("5", "System",  "system",  "htop"),
+    ("6", "Wi-Fi",   "wifi",    "sudo nmtui"),
+    ("7", "Power",   None,      "power"),
+]
+
+def sh(*args):
+    return subprocess.run(args, capture_output=True, text=True).stdout.strip()
+
+def read(path, default="?"):
+    try:
+        with open(path) as f:
+            return f.read().strip()
+    except OSError:
+        return default
+
+def status():
+    bat = read("/sys/class/power_supply/battery/capacity")
+    charging = read("/sys/class/power_supply/battery/status") == "Charging"
+    ssid = ""
+    for line in sh("nmcli", "-t", "-f", "active,ssid", "dev", "wifi").splitlines():
+        if line.startswith("yes:"):
+            ssid = line[4:]
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("192.0.2.1", 9))               # no packet is sent; picks the source address
+        ip = s.getsockname()[0]
+    except OSError:
+        ip = ""
+    return f"{bat}%{' +' if charging else ''}", ssid or "no Wi-Fi", ip
+
+def open_app(name, cmd):
+    if callable(cmd):
+        cmd = cmd()
+    if name and name in sh("tmux", "list-windows", "-F", "#W").splitlines():
+        subprocess.run(["tmux", "select-window", "-t", name])
+    elif name:
+        subprocess.run(["tmux", "new-window", "-n", name, cmd])
+    else:
+        subprocess.run(["tmux", "new-window"])
+
+def power(scr):
+    draw_lines(scr, ["", "  Power", "", "  r  Reboot", "  p  Power off", "", "  any other key: back"])
+    scr.timeout(-1)
+    k = scr.getkey()
+    if k in ("r", "p"):
+        curses.endwin()
+        os.system("sudo reboot" if k == "r" else "sudo poweroff")
+
+def draw_lines(scr, lines, attrs=None):
+    scr.erase()
+    h, w = scr.getmaxyx()
+    for y, line in enumerate(lines[:h - 1]):
+        scr.addnstr(y, 0, line, w - 1, (attrs or {}).get(y, 0))
+    scr.refresh()
+
+def main(scr):
+    curses.curs_set(0)
+    curses.use_default_colors()
+    curses.init_pair(1, 244, -1)                   # grey, as the tmux status line
+    grey, bold = curses.color_pair(1), curses.A_BOLD
+    while True:
+        bat, ssid, ip = status()
+        now = datetime.datetime.now()
+        lines = ["", f"  {now:%H:%M}", f"  {now:%A %d %B}", "",
+                 f"  {bat}   {ssid}   {ip}", "", ""]
+        attrs = {1: bold, 2: grey, 4: grey}
+        for key, label, _, _ in ITEMS:
+            lines += [f"  {key}  {label}", ""]
+        lines += ["", "  Alt+m: back to this menu"]
+        attrs[len(lines) - 1] = grey
+        draw_lines(scr, lines, attrs)
+        scr.timeout(30000)                         # refresh the clock and battery
+        try:
+            k = scr.getkey()
+        except curses.error:
+            continue
+        for key, label, name, cmd in ITEMS:
+            if k == key:
+                if cmd == "power":
+                    power(scr)
+                else:
+                    open_app(name, cmd)
+
+if __name__ == "__main__":
+    while True:                                    # never leave the window empty
+        try:
+            curses.wrapper(main)
+        except KeyboardInterrupt:
+            pass
