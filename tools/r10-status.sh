@@ -11,3 +11,4 @@ tmux list-windows -F '#I:#W' | tr '\n' ' '; echo
 echo "--- osk.log"; cat /tmp/osk.log
 apk list -I fbterm 2>/dev/null
 tmux display -p 'term=#{client_termname} features=#{client_termfeatures}'
+tmux list-clients -F 'client #{client_width}x#{client_height}'

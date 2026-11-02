@@ -1,7 +1,7 @@
 From e42a7a2e65af345c1ebd85c5729e7d6056723ae6 Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Sun, 1 Nov 2026 19:11:46 +0100
-Subject: [PATCH 16/37] firmware-samsung-beyond1lte: add MFC video codec
+Subject: [PATCH 16/39] firmware-samsung-beyond1lte: add MFC video codec
  firmware (fixes 3-min boot)
 
 ---

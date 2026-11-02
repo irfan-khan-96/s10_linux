@@ -10,7 +10,8 @@ rows = ["┌──────┬──────┐ ╔═════╦═�
         "├──────┼──────┤ ╠═════╬═════╣ ┗━━━━┛",
         "│ ▁▂▃▄▅▆▇█ ░▒▓ │ ╚═════╩═════╝ ←↑→↓",
         "└──────┴──────┘ ███████▌ 82%  ▲▼▶◀",
-        "farmer@s10:~$ htop  [||||||    40%]"]
+        "farmer@s10:~$ htop  [||||||    40%]",
+        "⇧ ⌫ ⏎ ← → ↑ ↓   SHIFT DEL RET"]
 img = Image.new("RGB", (CW * 38, CH * len(rows)), (6, 3, 0))
 d = ImageDraw.Draw(img)
 for r, line in enumerate(rows):

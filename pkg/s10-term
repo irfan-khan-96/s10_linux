@@ -11,20 +11,20 @@ rotate="$(cat /run/s10-rotate 2>/dev/null || echo 0)"
 if [ "$rotate" != 0 ]; then
 	export FBTERM_RESERVE_BOTTOM=0
 else
-	export FBTERM_RESERVE_BOTTOM="$(cat "$FBTERM_RESERVE_FILE" 2>/dev/null || echo 1100)"
+	export FBTERM_RESERVE_BOTTOM="$(cat "$FBTERM_RESERVE_FILE" 2>/dev/null || echo 1200)"
 fi
 # CRT scanlines: every Nth pixel row at half brightness; /etc/s10-scanlines holds N (0 = off)
 export FBTERM_SCANLINES="$(cat /etc/s10-scanlines 2>/dev/null || echo 3)"
-# Amber phosphor palette, set with fbterm's "ESC [ 3 ; n ; r ; g ; b }". A monochrome
+# Soft amber phosphor palette, set with fbterm's "ESC [ 3 ; n ; r ; g ; b }". A monochrome
 # screen: the 16 colours are amber shades (reds lean orange, greens lean yellow) so
 # ls, git and htop stay readable. 7 = text, 8 = dim, 12 = highlight (shared with tmux,
 # the home screen and the on-screen keyboard).
-palette='0;5;2;0 1;255;110;40 2;230;200;70 3;255;200;40 4;200;130;30 5;240;130;70
-6;245;185;100 7;255;176;0 8;115;75;0 9;255;130;70 10;250;220;100 11;255;215;80
-12;255;200;90 13;255;160;100 14;255;210;150 15;255;230;170'
+palette='0;5;2;0 1;235;110;60 2;214;190;96 3;235;188;80 4;180;126;52 5;222;132;92
+6;226;180;118 7;232;168;60 8;110;76;22 9;245;130;90 10;232;208;120 11;242;204;110
+12;245;195;100 13;240;160;116 14;240;204;150 15;250;220;160'
 seq=""
 for c in $palette; do seq="$seq\033[3;$c}"; done
 # S10 VT = VT323 plus box/block glyphs; JetBrains Mono fills in anything else.
 # fbterm hands its child TERM=linux (8 colours); tmux must see TERM=fbterm (256 colours).
-exec fbterm --screen-rotate="$rotate" --font-names="S10 VT,JetBrains Mono" --font-size=56 -- \
+exec fbterm --screen-rotate="$rotate" --font-names="S10 VT,JetBrains Mono" --font-size=64 -- \
 	sh -c "printf '$seq\033[2J'; TERM=fbterm exec tmux new -A -s main -n menu s10-menu"
