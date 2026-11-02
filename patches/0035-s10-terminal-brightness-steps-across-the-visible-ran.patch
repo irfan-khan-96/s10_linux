@@ -1,0 +1,55 @@
+From 68f4e786a6f501641b5aaed3d83905b1ad19df25 Mon Sep 17 00:00:00 2001
+From: khan <khan@localhost>
+Date: Mon, 2 Nov 2026 01:22:03 +0100
+Subject: [PATCH 35/35] s10-terminal: brightness steps across the visible
+ range, gentler night cap
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ device/downstream/s10-terminal/APKBUILD | 4 ++--
+ device/downstream/s10-terminal/s10-osk  | 7 +++++--
+ 2 files changed, 7 insertions(+), 4 deletions(-)
+
+diff --git a/device/downstream/s10-terminal/APKBUILD b/device/downstream/s10-terminal/APKBUILD
+index 3f98c3f4bb..231d89bfc5 100644
+--- a/device/downstream/s10-terminal/APKBUILD
++++ b/device/downstream/s10-terminal/APKBUILD
+@@ -2,7 +2,7 @@
+ # setup that turns samsung-beyond1lte-downstream into a pocket terminal.
+ pkgname=s10-terminal
+ pkgver=1
+-pkgrel=11
++pkgrel=12
+ pkgdesc="Galaxy S10 pocket terminal: fbterm + tmux, on-screen keyboard, hardening"
+ url="https://postmarketos.org"
+ arch="aarch64"
+@@ -71,7 +71,7 @@ package() {
+ }
+ 
+ sha512sums="
+-4a445167739a0d88b3d2917af38f571e1b93e10be7cd05d05c19e6fe255bab60a24e85ba45bac0154c84c73993e1893410fd5619b5d72ad9221f83d3b22db235  s10-osk
++92bbb71697ed8033344a1644819510ff7fc2c62ed0e0dc67cdaf5f133e5223a745531f29ac76c20bc4ff99f3ce72232e360cc53edf4f0757262db0529c928168  s10-osk
+ 6002ce1660cb4ab9ea93d977af6c729db06ad5d338fe0d302df17ebb51a22ee743d0a8fcdfe090a6542854a3aa3f6b8463e0fd686d751ea5ad64fac6f3d615f6  s10-menu
+ a6931571047df0ce93b201c70faf492f10658b9bd8715b302d1136fb800bc475e0a9dedba2196fc7cc23348313ed2db7be7ee80e391149a1ce1ab11e355878d8  s10-status
+ 60e7502ae25c525ce5037832b451905939c9fe0e6ff4eac57376e7a870c8db05e77c3f1212cf0f4bb4b8ddec307787a5d9cad4aa44eb578e2a5547b0027e37d1  s10-splash
+diff --git a/device/downstream/s10-terminal/s10-osk b/device/downstream/s10-terminal/s10-osk
+index fcd83e1dd4..067d03c4e9 100644
+--- a/device/downstream/s10-terminal/s10-osk
++++ b/device/downstream/s10-terminal/s10-osk
+@@ -257,8 +257,11 @@ class Display:
+     NIGHT = "/sys/class/mdnie/mdnie/night_mode"
+     SAVED = "/var/lib/s10-terminal/brightness"
+     CONF = "/etc/s10-night"                  # "22 7" = night from 22:00 to 07:00; "off" disables
+-    LEVELS = [400, 800, 1600, 3200, 6400, 12800, 25600, 48600]
+-    NIGHT_CAP, NIGHT_LEVEL = 1600, 2
++    # platform brightness; the panel maps it to nits very unevenly (1600 = 4 nits,
++    # 12800 = 183 nits), so the steps are spread over the visible range. Above 25500
++    # is high-brightness mode, left out (heat, burn-in).
++    LEVELS = [2400, 4000, 6000, 8500, 11000, 14000, 18000, 22000, 25500]
++    NIGHT_CAP, NIGHT_LEVEL = 11000, 2
+ 
+     def __init__(self):
+         self.level = self.read_saved()
+-- 
+2.53.0
+

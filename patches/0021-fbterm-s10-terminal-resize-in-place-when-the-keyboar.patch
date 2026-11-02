@@ -1,7 +1,7 @@
 From be7690cb962c9bfa875fb8c3053d1c216be61e21 Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Sun, 1 Nov 2026 22:43:04 +0100
-Subject: [PATCH 21/34] fbterm, s10-terminal: resize in place when the keyboard
+Subject: [PATCH 21/35] fbterm, s10-terminal: resize in place when the keyboard
  shows or hides
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

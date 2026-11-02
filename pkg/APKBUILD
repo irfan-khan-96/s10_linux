@@ -2,7 +2,7 @@
 # setup that turns samsung-beyond1lte-downstream into a pocket terminal.
 pkgname=s10-terminal
 pkgver=1
-pkgrel=11
+pkgrel=12
 pkgdesc="Galaxy S10 pocket terminal: fbterm + tmux, on-screen keyboard, hardening"
 url="https://postmarketos.org"
 arch="aarch64"
@@ -71,7 +71,7 @@ package() {
 }
 
 sha512sums="
-4a445167739a0d88b3d2917af38f571e1b93e10be7cd05d05c19e6fe255bab60a24e85ba45bac0154c84c73993e1893410fd5619b5d72ad9221f83d3b22db235  s10-osk
+92bbb71697ed8033344a1644819510ff7fc2c62ed0e0dc67cdaf5f133e5223a745531f29ac76c20bc4ff99f3ce72232e360cc53edf4f0757262db0529c928168  s10-osk
 6002ce1660cb4ab9ea93d977af6c729db06ad5d338fe0d302df17ebb51a22ee743d0a8fcdfe090a6542854a3aa3f6b8463e0fd686d751ea5ad64fac6f3d615f6  s10-menu
 a6931571047df0ce93b201c70faf492f10658b9bd8715b302d1136fb800bc475e0a9dedba2196fc7cc23348313ed2db7be7ee80e391149a1ce1ab11e355878d8  s10-status
 60e7502ae25c525ce5037832b451905939c9fe0e6ff4eac57376e7a870c8db05e77c3f1212cf0f4bb4b8ddec307787a5d9cad4aa44eb578e2a5547b0027e37d1  s10-splash

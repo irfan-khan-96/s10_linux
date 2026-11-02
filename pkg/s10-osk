@@ -257,8 +257,11 @@ class Display:
     NIGHT = "/sys/class/mdnie/mdnie/night_mode"
     SAVED = "/var/lib/s10-terminal/brightness"
     CONF = "/etc/s10-night"                  # "22 7" = night from 22:00 to 07:00; "off" disables
-    LEVELS = [400, 800, 1600, 3200, 6400, 12800, 25600, 48600]
-    NIGHT_CAP, NIGHT_LEVEL = 1600, 2
+    # platform brightness; the panel maps it to nits very unevenly (1600 = 4 nits,
+    # 12800 = 183 nits), so the steps are spread over the visible range. Above 25500
+    # is high-brightness mode, left out (heat, burn-in).
+    LEVELS = [2400, 4000, 6000, 8500, 11000, 14000, 18000, 22000, 25500]
+    NIGHT_CAP, NIGHT_LEVEL = 11000, 2
 
     def __init__(self):
         self.level = self.read_saved()
