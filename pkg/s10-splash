@@ -8,20 +8,38 @@ import fcntl, mmap, os
 W, H = 1440, 3040
 LL = W * 2
 CACHE = "/var/cache/s10-terminal/splash.rgb565"
-FONT = "/usr/share/fonts/jetbrains-mono/JetBrainsMono-Regular.ttf"
-ACCENT, GREY = (122, 166, 218), (102, 102, 110)
+FONT = "/usr/share/fonts/s10-vt/S10VT-Regular.ttf"
+AMBER, DIM, BG = (255, 176, 0), (115, 75, 0), (5, 2, 0)
 
 def render():
+    """Amber 'BIOS' screen in the terminal's font, with the same scanlines as fbterm."""
     import numpy as np
     from PIL import Image, ImageDraw, ImageFont
-    img = Image.new("RGB", (W, H), (0, 0, 0))
+    img = Image.new("RGB", (W, H), BG)
     d = ImageDraw.Draw(img)
-    big, small = ImageFont.truetype(FONT, 220), ImageFont.truetype(FONT, 60)
-    d.text((W / 2, H / 2 - 120), "S10", font=big, fill=ACCENT, anchor="mm")
-    d.text((W / 2, H / 2 + 80), "pocket terminal", font=small, fill=GREY, anchor="mm")
-    d.text((W / 2, H - 260), "starting…", font=small, fill=GREY, anchor="mm")
+    big, text = ImageFont.truetype(FONT, 300), ImageFont.truetype(FONT, 56)
+    d.text((W / 2, 900), "S10", font=big, fill=AMBER, anchor="mm")
+    d.rectangle((120, 1120, W - 120, 1126), fill=DIM)
+    lines = [("POCKET TERMINAL", AMBER), ("", None),
+             ("CPU   EXYNOS 9820 (8 CORES)", DIM), ("OS    POSTMARKETOS EDGE", DIM),
+             ("KERN  LINUX 4.14 DOWNSTREAM", DIM), ("TERM  FBTERM + TMUX", DIM), ("", None),
+             ("BOOTING", AMBER)]
+    y = 1200
+    for line, colour in lines:
+        if line:
+            d.text((160, y), line, font=text, fill=colour)
+        y += 70
+    d.rectangle((160 + 8 * 22 + 10, y - 70 + 8, 160 + 9 * 22 + 6, y - 70 + 56), fill=AMBER)   # cursor
     rgb = np.asarray(img, dtype=np.uint16)
-    data = (((rgb[..., 0] >> 3) << 11) | ((rgb[..., 1] >> 2) << 5) | (rgb[..., 2] >> 3)).astype("<u2").tobytes()
+    px = (((rgb[..., 0] >> 3) << 11) | ((rgb[..., 1] >> 2) << 5) | (rgb[..., 2] >> 3)).astype("<u2")
+    try:
+        with open("/etc/s10-scanlines") as f:
+            n = int(f.read())
+    except (OSError, ValueError):
+        n = 3
+    if n >= 2:
+        px[n - 1::n] = (px[n - 1::n] >> 1) & 0x7BEF
+    data = px.tobytes()
     os.makedirs(os.path.dirname(CACHE), exist_ok=True)
     with open(CACHE, "wb") as f:
         f.write(data)

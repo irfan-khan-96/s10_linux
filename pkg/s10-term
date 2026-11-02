@@ -10,18 +10,21 @@ export FBTERM_RESERVE_FILE=/run/s10-osk-reserve
 rotate="$(cat /run/s10-rotate 2>/dev/null || echo 0)"
 if [ "$rotate" != 0 ]; then
 	export FBTERM_RESERVE_BOTTOM=0
-	size=40                     # landscape has room for a slightly larger font
 else
 	export FBTERM_RESERVE_BOTTOM="$(cat "$FBTERM_RESERVE_FILE" 2>/dev/null || echo 1100)"
-	size=36
 fi
-# s10 palette (Tomorrow Night on true black), set with fbterm's "ESC [ 3 ; n ; r ; g ; b }".
-# Colour 12 is the accent that tmux, the menu and the on-screen keyboard share.
-palette='0;0;0;0 1;204;102;102 2;181;189;104 3;240;198;116 4;129;162;190 5;178;148;187
-6;138;190;183 7;197;200;198 8;102;102;110 9;213;78;83 10;185;202;74 11;231;197;71
-12;122;166;218 13;195;151;216 14;112;192;177 15;234;234;234'
+# CRT scanlines: every Nth pixel row at half brightness; /etc/s10-scanlines holds N (0 = off)
+export FBTERM_SCANLINES="$(cat /etc/s10-scanlines 2>/dev/null || echo 3)"
+# Amber phosphor palette, set with fbterm's "ESC [ 3 ; n ; r ; g ; b }". A monochrome
+# screen: the 16 colours are amber shades (reds lean orange, greens lean yellow) so
+# ls, git and htop stay readable. 7 = text, 8 = dim, 12 = highlight (shared with tmux,
+# the home screen and the on-screen keyboard).
+palette='0;5;2;0 1;255;110;40 2;230;200;70 3;255;200;40 4;200;130;30 5;240;130;70
+6;245;185;100 7;255;176;0 8;115;75;0 9;255;130;70 10;250;220;100 11;255;215;80
+12;255;200;90 13;255;160;100 14;255;210;150 15;255;230;170'
 seq=""
 for c in $palette; do seq="$seq\033[3;$c}"; done
+# S10 VT = VT323 plus box/block glyphs; JetBrains Mono fills in anything else.
 # fbterm hands its child TERM=linux (8 colours); tmux must see TERM=fbterm (256 colours).
-exec fbterm --screen-rotate="$rotate" --font-size="$size" -- \
+exec fbterm --screen-rotate="$rotate" --font-names="S10 VT,JetBrains Mono" --font-size=56 -- \
 	sh -c "printf '$seq\033[2J'; TERM=fbterm exec tmux new -A -s main -n menu s10-menu"

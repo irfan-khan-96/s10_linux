@@ -17,7 +17,8 @@ KB_H = int(os.environ.get("S10_OSK_HEIGHT", "1100"))
 TOP = H_SCREEN - KB_H
 LL = W * 2                                  # RGB565, 2 bytes per pixel
 TOUCH = "/dev/input/s10-touchscreen"
-FONT = "/usr/share/fonts/jetbrains-mono/JetBrainsMono-Regular.ttf"
+FONT = "/usr/share/fonts/s10-vt/S10VT-Regular.ttf"           # VT323 + box/block glyphs
+SCANLINES = "/etc/s10-scanlines"                             # every Nth row darker; 0 = off
 VIBRATOR = "/sys/class/timed_output/vibrator/enable"
 BLANKED = "/run/s10-blanked"                # written by s10-idle-blank
 TMUX = ["tmux", "-S", "/tmp/tmux-10000/default"]   # the phone user's tmux server
@@ -46,38 +47,51 @@ def char_key(c):
 # Layouts: list of rows; each key is (label, action, width). action: "c:<char>"
 # types a character, "k:<NAME>" a key, "m:<NAME>" toggles a modifier, "l:<layer>".
 def row(chars): return [(c, "c:" + c, 1) for c in chars]
-FN = [("Esc", "k:ESC", 1), ("Tab", "k:TAB", 1), ("Ctrl", "m:CTRL", 1.2), ("Alt", "m:ALT", 1),
+FN = [("ESC", "k:ESC", 1), ("TAB", "k:TAB", 1), ("CTRL", "m:CTRL", 1.2), ("ALT", "m:ALT", 1),
       ("←", "k:LEFT", 1), ("↓", "k:DOWN", 1), ("↑", "k:UP", 1), ("→", "k:RIGHT", 1)]
 LAYERS = {
     "abc": [FN, row("1234567890"), row("qwertyuiop"), row("asdfghjkl"),
-            [("⇧", "m:SHIFT", 1.5)] + row("zxcvbnm") + [("⌫", "k:BKSP", 1.5)],
-            [("?123", "l:sym", 1.5), ("-", "c:-", 1), ("/", "c:/", 1), ("", "c: ", 4.5),
-             (".", "c:.", 1), ("⏎", "k:ENTER", 1.8)]],
+            [("SHIFT", "m:SHIFT", 1.5)] + row("zxcvbnm") + [("DEL", "k:BKSP", 1.5)],
+            [("123", "l:sym", 1.5), ("-", "c:-", 1), ("/", "c:/", 1), ("SPACE", "c: ", 4.5),
+             (".", "c:.", 1), ("RET", "k:ENTER", 1.8)]],
     "sym": [FN, row("!@#$%^&*()"), row("-_=+[]{};"), row(":'\"`~|\\<>"),
-            [("⇧", "m:SHIFT", 1.5)] + row(",.?/$&*") + [("⌫", "k:BKSP", 1.5)],
-            [("abc", "l:abc", 1.5), ("PgUp", "k:PGUP", 1.3), ("PgDn", "k:PGDN", 1.3), ("", "c: ", 3.4),
-             ("|", "c:|", 1), ("⏎", "k:ENTER", 1.8)]],
+            [("SHIFT", "m:SHIFT", 1.5)] + row(",.?/$&*") + [("DEL", "k:BKSP", 1.5)],
+            [("ABC", "l:abc", 1.5), ("PGUP", "k:PGUP", 1.3), ("PGDN", "k:PGDN", 1.3), ("SPACE", "c: ", 3.4),
+             ("|", "c:|", 1), ("RET", "k:ENTER", 1.8)]],
 }
 REPEATABLE = {"k:BKSP", "k:LEFT", "k:RIGHT", "k:UP", "k:DOWN"}
 LONG_PRESS, REPEAT_DELAY, REPEAT_EVERY = 0.40, 0.45, 0.06
 SPACE_STEP = 45                             # px of space-bar swipe per cursor step
+DEAD_ZONE = 80                              # px above the keyboard where touches are ignored
 
-# s10 theme: true black, accent = palette colour 12 (#7aa6da), shared with tmux and the menu
-BG, KEY, SPECIAL, TEXT, HINT = (0, 0, 0), (30, 30, 34), (46, 46, 52), (225, 225, 225), (120, 120, 132)
-ACCENT, ACTIVE = (122, 166, 218), (52, 84, 120)
+# Amber phosphor, matching the palette s10-term loads into fbterm: outlined keys,
+# amber labels, a key lights up solid amber while pressed.
+BG, TEXT, DIM, HINT = (5, 2, 0), (255, 176, 0), (115, 75, 0), (150, 98, 0)
+ACCENT, ACTIVE = (255, 176, 0), (70, 45, 0)                # pressed / held modifier fill
 PAD = 10
+
+def scan_period():
+    try:
+        with open(SCANLINES) as f:
+            n = int(f.read())
+    except (OSError, ValueError):
+        n = 3
+    return n if n >= 2 else 0
+SCAN = scan_period()
 
 class Keyboard:
     def __init__(self):
         fd = os.open("/dev/fb0", os.O_RDWR)
         self.fb = mmap.mmap(fd, LL * H_SCREEN, mmap.MAP_SHARED, mmap.PROT_READ | mmap.PROT_WRITE)
-        self.font = ImageFont.truetype(FONT, 58)
-        self.small = ImageFont.truetype(FONT, 42)
-        self.tiny = ImageFont.truetype(FONT, 28)
-        self.big = ImageFont.truetype(FONT, 96)
+        self.font = ImageFont.truetype(FONT, 80)
+        self.small = ImageFont.truetype(FONT, 50)
+        self.tiny = ImageFont.truetype(FONT, 36)
+        self.big = ImageFont.truetype(FONT, 130)
+        self.screen = np.ndarray((H_SCREEN, W), dtype="<u2", buffer=self.fb)   # fb as pixels
         self.layer, self.mods = "abc", set()
         self.pressed = None                      # action of the key under the finger
         self.alt = None                          # long-press alternative being shown
+        self.bases = {}                          # (layer, mods) -> (PIL image, RGB565 array)
         self.uinput = self.make_uinput()
         self.layout()
         self.draw()
@@ -119,49 +133,88 @@ class Keyboard:
                 self.keys.append((box, label, action))
                 x += width * uw
 
+    def state(self):
+        return self.layer, frozenset(self.mods)
+
     def key_colour(self, action):
-        if self.pressed == action: return ACCENT
         if action.startswith("m:") and action[2:] in self.mods: return ACTIVE
-        return KEY if action.startswith("c:") and len(action) == 3 and action[2] != " " else SPECIAL
+        return BG
 
     def label(self, label):
         if "SHIFT" in self.mods and len(label) == 1 and label.isalpha(): return label.upper()
         return label
 
-    def render(self):
-        img = Image.new("RGB", (W, KB_H), BG)
-        d = ImageDraw.Draw(img)
-        for box, label, action in self.keys:
-            d.rounded_rectangle(box, radius=18, fill=self.key_colour(action))
-            text = self.label(label)
-            font = self.font if len(text) <= 2 else self.small
-            cx, cy = (box[0] + box[2]) / 2, (box[1] + box[3]) / 2
-            d.text((cx, cy), text, font=font, fill=TEXT, anchor="mm")
-            if self.layer == "abc" and label in LONG:
-                d.text((box[2] - 12, box[1] + 8), LONG[label], font=self.tiny, fill=HINT, anchor="ra")
-        if self.pressed and self.pressed.startswith("c:") and self.pressed != "c: ":
-            self.render_popup(d)
-        return img
+    def draw_key(self, d, box, label, action, fill, dx=0, dy=0):
+        """Outlined key; pressed keys are filled amber with dark text."""
+        b = (box[0] - dx, box[1] - dy, box[2] - dx, box[3] - dy)
+        pressed = fill == ACCENT
+        d.rectangle(b, fill=fill, outline=TEXT if pressed or fill == ACTIVE else DIM, width=3)
+        text = self.label(label)
+        font = self.font if len(text) <= 2 else self.small
+        d.text(((b[0] + b[2]) / 2, (b[1] + b[3]) / 2), text, font=font,
+               fill=BG if pressed else TEXT, anchor="mm")
+        if self.layer == "abc" and label in LONG:
+            d.text((b[2] - 10, b[1] + 4), LONG[label], font=self.tiny, fill=BG if pressed else HINT, anchor="ra")
 
-    def render_popup(self, d):
-        """Enlarged bubble above the pressed key (its long-press symbol once held)."""
-        for box, label, action in self.keys:
-            if action == self.pressed:
-                break
-        text = self.alt or self.label(label)
+    def base(self):
+        """The keyboard with nothing pressed, rendered once per layer and modifier state."""
+        state = (self.layer, frozenset(self.mods))
+        if state not in self.bases:
+            img = Image.new("RGB", (W, KB_H), BG)
+            d = ImageDraw.Draw(img)
+            d.rectangle((0, 0, W, 2), fill=DIM)                  # rule between terminal and keys
+            for box, label, action in self.keys:
+                self.draw_key(d, box, label, action, self.key_colour(action))
+            self.bases[state] = (img, to565(img, TOP))
+        return self.bases[state]
+
+    def popup_box(self, box):
+        """Enlarged bubble above a key; on the top rows (no room above) it covers the key."""
         w, h = (box[2] - box[0]) * 1.5, self.rh * 1.25
         cx = min(max((box[0] + box[2]) / 2, w / 2 + PAD), W - w / 2 - PAD)
         bottom = box[1] - PAD
-        top = max(bottom - h, PAD)
-        if top == PAD:                            # no room above (top rows): cover the key itself
+        top = bottom - h
+        if top < PAD:
             top, bottom = box[1] - PAD / 2, box[3] + PAD / 2
-        d.rounded_rectangle((cx - w / 2, top, cx + w / 2, bottom), radius=24, fill=ACCENT)
-        d.text((cx, (top + bottom) / 2), text, font=self.big, fill=BG, anchor="mm")
+        return int(cx - w / 2), int(top), int(cx + w / 2), int(bottom)
+
+    def region(self, action):
+        """Screen area (in keyboard coordinates) that showing this key pressed changes."""
+        for box, label, a in self.keys:
+            if a == action:
+                x0, y0, x1, y1 = box
+                if action.startswith("c:") and action != "c: ":
+                    p = self.popup_box(box)
+                    x0, y0, x1, y1 = min(x0, p[0]), min(y0, p[1]), max(x1, p[2]), max(y1, p[3])
+                return (max(x0 - 2, 0), max(y0 - 2, 0), min(x1 + 2, W), min(y1 + 2, KB_H)), box, label
+        return None
+
+    def show_pressed(self, action):
+        """Repaint only the pressed key (and its pop-up) over the cached keyboard."""
+        found = self.region(action)
+        if not found:
+            return
+        (x0, y0, x1, y1), box, label = found
+        img = self.base()[0].crop((x0, y0, x1, y1))
+        d = ImageDraw.Draw(img)
+        self.draw_key(d, box, label, action, ACCENT, x0, y0)
+        if action.startswith("c:") and action != "c: ":
+            p = self.popup_box(box)
+            d.rectangle((p[0] - x0, p[1] - y0, p[2] - x0, p[3] - y0), fill=ACCENT)
+            d.text(((p[0] + p[2]) / 2 - x0, (p[1] + p[3]) / 2 - y0), self.alt or self.label(label),
+                   font=self.big, fill=BG, anchor="mm")
+        self.screen[TOP + y0:TOP + y1, x0:x1] = to565(img, TOP + y0)
+
+    def show_released(self, action):
+        found = self.region(action)
+        if found:
+            x0, y0, x1, y1 = found[0]
+            self.screen[TOP + y0:TOP + y1, x0:x1] = self.base()[1][y0:y1, x0:x1]
 
     def draw(self):
-        rgb = np.asarray(self.render(), dtype=np.uint16)
-        rgb565 = ((rgb[..., 0] >> 3) << 11) | ((rgb[..., 1] >> 2) << 5) | (rgb[..., 2] >> 3)
-        self.fb[TOP * LL:(TOP + KB_H) * LL] = rgb565.astype("<u2").tobytes()
+        self.screen[TOP:TOP + KB_H] = self.base()[1]
+        if self.pressed:
+            self.show_pressed(self.pressed)
 
     def splash(self, text, rotation):
         """Full-screen message (shown while fbterm restarts), drawn for the coming orientation."""
@@ -171,9 +224,7 @@ class Keyboard:
         d.text((cw / 2, ch / 2), text, font=self.big, fill=ACCENT, anchor="mm")
         if rotation == 1: img = img.transpose(Image.Transpose.ROTATE_270)
         elif rotation == 3: img = img.transpose(Image.Transpose.ROTATE_90)
-        rgb = np.asarray(img, dtype=np.uint16)
-        rgb565 = ((rgb[..., 0] >> 3) << 11) | ((rgb[..., 1] >> 2) << 5) | (rgb[..., 2] >> 3)
-        self.fb[0:H_SCREEN * LL] = rgb565.astype("<u2").tobytes()
+        self.screen[:] = to565(img, None if rotation else 0)
 
     # ---- input ----
     def key_at(self, x, y):
@@ -195,6 +246,16 @@ class Keyboard:
                 self.tap(K[arg])
             self.mods -= {"SHIFT", "CTRL", "ALT"}       # one-shot modifiers
         buzz()
+
+def to565(img, y0=None):
+    """PIL RGB image -> RGB565 pixels; with y0 (its screen row) the scanline rows are halved
+    exactly where fbterm halves them (screen row % N == N - 1)."""
+    rgb = np.asarray(img, dtype=np.uint16)
+    px = (((rgb[..., 0] >> 3) << 11) | ((rgb[..., 1] >> 2) << 5) | (rgb[..., 2] >> 3)).astype("<u2")
+    if SCAN and y0 is not None:
+        first = (SCAN - 1 - y0) % SCAN
+        px[first::SCAN] = (px[first::SCAN] >> 1) & 0x7BEF
+    return px
 
 def buzz():
     try:
@@ -366,13 +427,13 @@ class Visibility:
             with open(ROTATE, "w") as f:
                 f.write(str(rotation))
             self.landscape = True
-            self.kb.splash("↻", rotation)
+            self.kb.splash("ROTATING...", rotation)
             restart_terminal()
         else:
             if self.landscape:
                 os.remove(ROTATE)
                 self.landscape = False
-                self.kb.splash("↻", 0)
+                self.kb.splash("ROTATING...", 0)
                 restart_terminal()
             self.apply(not self.usb)
 
@@ -416,6 +477,13 @@ class Gestures:
     def __init__(self, vis):
         self.vis = vis
         self.active = False
+        self.scrolled = False                        # we put a pane into copy mode
+
+    def leave_scroll(self):
+        """Typing after a scroll: quit copy mode, or keys would go to tmux, not the shell."""
+        if self.scrolled:
+            tmux("send-keys", "-X", "cancel")
+            self.scrolled = False
 
     def content(self, x, y):
         """Physical touch point -> terminal pixel coordinates and terminal size."""
@@ -470,6 +538,7 @@ class Gestures:
         elif n > 0:
             tmux("copy-mode", "-e")
             tmux("send-keys", "-X", "-N", str(n), "scroll-up")
+            self.scrolled = True
         else:
             tmux("send-keys", "-X", "-N", str(-n), "scroll-down")   # leaves copy mode at the bottom (-e)
 
@@ -517,11 +586,18 @@ class Touch:
             if not action:
                 self.target = "ignore"
                 return
+            self.gestures.leave_scroll()             # typing always goes to the shell
             self.target, self.since, self.last, self.x0, self.steps = "key", now, now, x, 0
             self.kb.pressed, self.kb.alt = action, None
+            before = self.kb.state()
             if not action.startswith("c:"):         # modifiers, layers, special keys: at once
                 self.kb.press(action)
-            self.kb.draw()
+            if self.kb.state() != before:
+                self.kb.draw()
+            else:
+                self.kb.show_pressed(action)
+        elif self.vis.visible and y >= TOP - DEAD_ZONE:
+            self.target = "ignore"                   # just above the keys: a missed key, not a swipe
         else:
             self.target = "term"
             self.gestures.start(x, y, now)
@@ -541,10 +617,14 @@ class Touch:
             self.gestures.end(x, y, now)
         elif self.target == "key":
             action = self.kb.pressed
+            before = self.kb.state()
             if action.startswith("c:") and not (action == "c: " and self.steps):
                 self.kb.press(action, self.kb.alt)
             self.kb.pressed = self.kb.alt = None
-            self.kb.draw()
+            if self.kb.state() != before:            # one-shot Shift/Ctrl/Alt used up
+                self.kb.draw()
+            else:
+                self.kb.show_released(action)
         self.target = None
 
     def hold(self, now):
@@ -556,9 +636,12 @@ class Touch:
         if action.startswith("c:") and self.kb.alt is None and self.kb.layer == "abc" \
                 and label in LONG and now - self.since > LONG_PRESS:
             self.kb.alt = LONG[label]
-            buzz(); self.kb.draw()
+            buzz(); self.kb.show_pressed(action)
         elif action in REPEATABLE and now - self.since > REPEAT_DELAY and now - self.last > REPEAT_EVERY:
+            before = self.kb.state()
             self.kb.press(action); self.last = now
+            if self.kb.state() != before:
+                self.kb.draw()
 
     def waiting(self):
         return self.target == "key"
