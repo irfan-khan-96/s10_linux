@@ -1,0 +1,96 @@
+# Local package for the S10 fork: terminal, on-screen keyboard and home-server
+# setup that turns samsung-beyond1lte-downstream into a pocket terminal.
+pkgname=s10-terminal
+pkgver=1
+pkgrel=11
+pkgdesc="Galaxy S10 pocket terminal: fbterm + tmux, on-screen keyboard, hardening"
+url="https://postmarketos.org"
+arch="aarch64"
+license="MIT"
+depends="
+	fbterm
+	font-jetbrains-mono
+	iptables
+	iptables-legacy
+	msm-fb-refresher
+	ncurses-terminfo
+	neovim
+	py3-numpy
+	py3-pillow
+	python3
+	tmux
+	unudhcpd
+	wordgrinder
+	"
+install="$pkgname.post-install $pkgname.post-upgrade"
+options="!check"
+source="
+	s10-osk
+	s10-menu
+	s10-status
+	s10-splash
+	s10-splash.initd
+	s10-idle-blank
+	s10-touch-absfix
+	s10-osk-start
+	s10-term
+	fbtermrc
+	tmux.conf
+	10-firewall.start
+	20-display-on.start
+	30-usb-dhcp.start
+	40-s10-tuning.start
+	45-s10-battery.start
+	50-s10-idle-blank.start
+	60-s10-osk.start
+	90-s10-touch-absfix.rules
+	unudhcpd.rndis0.confd
+	wifi-powersave-off.conf
+	sshd-hardening.conf
+	"
+
+package() {
+	for f in s10-osk s10-menu s10-status s10-splash s10-idle-blank s10-touch-absfix s10-osk-start s10-term; do
+		install -Dm755 "$srcdir/$f" "$pkgdir/usr/bin/$f"
+	done
+	install -Dm755 "$srcdir"/s10-splash.initd "$pkgdir"/etc/init.d/s10-splash
+	install -Dm644 "$srcdir"/fbtermrc "$pkgdir"/usr/share/s10-terminal/fbtermrc
+	install -Dm644 "$srcdir"/tmux.conf "$pkgdir"/etc/tmux.conf
+	for f in 10-firewall 20-display-on 30-usb-dhcp 40-s10-tuning 45-s10-battery 50-s10-idle-blank 60-s10-osk; do
+		install -Dm755 "$srcdir/$f.start" "$pkgdir/etc/local.d/$f.start"
+	done
+	install -Dm644 "$srcdir"/90-s10-touch-absfix.rules \
+		"$pkgdir"/usr/lib/udev/rules.d/90-s10-touch-absfix.rules
+	install -Dm644 "$srcdir"/unudhcpd.rndis0.confd "$pkgdir"/etc/conf.d/unudhcpd.rndis0
+	mkdir -p "$pkgdir"/etc/init.d
+	ln -s unudhcpd "$pkgdir"/etc/init.d/unudhcpd.rndis0
+	install -Dm644 "$srcdir"/wifi-powersave-off.conf \
+		"$pkgdir"/etc/NetworkManager/conf.d/10-s10-wifi-powersave-off.conf
+	install -Dm644 "$srcdir"/sshd-hardening.conf \
+		"$pkgdir"/etc/ssh/sshd_config.d/10-hardening.conf
+}
+
+sha512sums="
+4a445167739a0d88b3d2917af38f571e1b93e10be7cd05d05c19e6fe255bab60a24e85ba45bac0154c84c73993e1893410fd5619b5d72ad9221f83d3b22db235  s10-osk
+6002ce1660cb4ab9ea93d977af6c729db06ad5d338fe0d302df17ebb51a22ee743d0a8fcdfe090a6542854a3aa3f6b8463e0fd686d751ea5ad64fac6f3d615f6  s10-menu
+a6931571047df0ce93b201c70faf492f10658b9bd8715b302d1136fb800bc475e0a9dedba2196fc7cc23348313ed2db7be7ee80e391149a1ce1ab11e355878d8  s10-status
+60e7502ae25c525ce5037832b451905939c9fe0e6ff4eac57376e7a870c8db05e77c3f1212cf0f4bb4b8ddec307787a5d9cad4aa44eb578e2a5547b0027e37d1  s10-splash
+5fe4dd6a2064be409b02483188d9beebd4ab3de1263a62ad2453dfa7d33dcf2494f2ff81860a8443a5db44e97a454f17f0e8b55be921ed85a28e3689c3a0ae9d  s10-splash.initd
+c9e5d555630312522a7daefc1e14aa19bdde7352bff1d257315070ef553b216e1e927060863a0ba55fe9a7cbd9f3c4603b552a5ada1185d3c5db3a5cd73f5607  s10-idle-blank
+f5b670528587d518a367b66ae15fd9b5583b7ad666e03051523cf56a1b007469fc5fad535f4d22b12106042e93352b07594ec6dbc4da50766b3757d6e103f12b  s10-touch-absfix
+9daf9ac5a89cd6d83560f26e35b95253ea71b20eeb3556ebdf31e2b7e4a66dfa4845c0f73c43601ac63f2e56613f17777691135d564f4924f23b9a3865838e6f  s10-osk-start
+34991b8e98fb36f1bfa581d81025f4c4399479c934e29043f4a1f3a26ece722764ae41b1f1d8541d86698dbcbe416f29c8172be2fd6889cbf1fd9a39235cd920  s10-term
+57a90c056354401584f280ba2e94483dd08dc89fbbd643626f04a1d121ddd0c6a180efb477d863ecd4b2da95325ca8576d355c4467a774c39a08f594978e2675  fbtermrc
+c15b91da20e98ad404be1d64644cbfb5eaf7ed78e784026a27e64d4c709ccc233900195b24298d7e7544a59b523bcf7d1dc51d5f0bfa552bf6856d9caf95c589  tmux.conf
+2925ca72c125e154331429da14c4b2d515c0cb0b023cae521326f457d098a35ff58c78b5a32e2d950eacd2cb97e086c914e20067577232243c05baf72504df78  10-firewall.start
+0f7f7f1b2d71ca3c5b4082b82ce36f021c96ba8c14db74a4c552b8a931133dabdfdd69628a4d1830e84f2b0b1da40a8624ea100f548f782932fad2ad49846de3  20-display-on.start
+13ff9308e064e707cdf329b867d29ba7668e5662c36cc58212b1e13dbb4314c1e2d64b5ec2c9b6a0088f38c8d677162a7ecc1a4d7a488ff6ee86c3c8bf9680de  30-usb-dhcp.start
+6bd9d0b40ebf0fc1528e56e445d11e06c8d42c70b44f1fe4c8eccc4832570519a0f0d41c0b1ee433d6a6c95ce220b66fa4e4921df36837c3d083b62285f2e6ff  40-s10-tuning.start
+51be5db0e644129a02f5d152264ccc98814629be17ed1cd052b1e346d2dc98c0489ee22781fc823eb582871a232a216151e3eecae7e1409bd6c84a5adfed7a48  45-s10-battery.start
+f3efe2a495d1d1244094cda02a17814ff57ab5c2f49942cfbfaa4ddc385c686d9a8048c92a1b42d1e3d517f0d75396fe5d1d9d01dc966976492ad437d6e928ea  50-s10-idle-blank.start
+38b4b7aaadec367ed30dc9daa7d8d958972b6fb807817f22487029123e3527e62c28fa3be49d739985a101db9033bd29727be118a09eb5086d755fcb3f2dd289  60-s10-osk.start
+a484b168fdd2edfa58d0cfeab44448ec0d019ef4c27f4a24057be8bf7842c0a3447c847dc2e45353ad4f11bdd133495b4942f6367bb6ab49a807451ca7c283eb  90-s10-touch-absfix.rules
+1380cb0f25b065a8c908dcaf462c08832c4100992ec2c548d70b43aacbd5dcd0093fd96cc8671bfd6710c2bee7b543ab10b8e9ff90a201b370adea3f638f8c7a  unudhcpd.rndis0.confd
+8692b03ef5951179e8e2d622285925d8db9ec1999fe71c5611a37ba67f7c44b209c44ae4f467dfb3bb96f4b3257a243dc3060bf73e218d372fd06ca31e9e8de0  wifi-powersave-off.conf
+8390ae37016c3ba3cedf73b63c343c2eaf1329ba56b196f24cb58e5e0dfcff6850c60005792e36948fc14361748ea91a00341cf28c90f9e172e0c91e9afd0622  sshd-hardening.conf
+"

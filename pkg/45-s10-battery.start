@@ -1,0 +1,4 @@
+#!/bin/sh
+# Stop charging at 85% (Samsung "Protect battery"); the phone lives on the charger.
+# 0 = charge to 100%. Override with S10_CHARGE_LIMIT in /etc/conf.d/local.
+echo "${S10_CHARGE_LIMIT:-85}" > /sys/class/power_supply/battery/batt_full_capacity

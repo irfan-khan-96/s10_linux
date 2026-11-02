@@ -1,0 +1,43 @@
+#!/usr/bin/python3
+# Boot splash: switch the panel on and show a logo until fbterm takes over.
+# The image is rendered once (Pillow is slow to import) and cached as raw RGB565.
+# Drawing goes through mmap (the decon driver ignores write()); a pan ioctl makes
+# the panel show it before msm-fb-refresher runs.
+import fcntl, mmap, os
+
+W, H = 1440, 3040
+LL = W * 2
+CACHE = "/var/cache/s10-terminal/splash.rgb565"
+FONT = "/usr/share/fonts/jetbrains-mono/JetBrainsMono-Regular.ttf"
+ACCENT, GREY = (122, 166, 218), (102, 102, 110)
+
+def render():
+    import numpy as np
+    from PIL import Image, ImageDraw, ImageFont
+    img = Image.new("RGB", (W, H), (0, 0, 0))
+    d = ImageDraw.Draw(img)
+    big, small = ImageFont.truetype(FONT, 220), ImageFont.truetype(FONT, 60)
+    d.text((W / 2, H / 2 - 120), "S10", font=big, fill=ACCENT, anchor="mm")
+    d.text((W / 2, H / 2 + 80), "pocket terminal", font=small, fill=GREY, anchor="mm")
+    d.text((W / 2, H - 260), "starting…", font=small, fill=GREY, anchor="mm")
+    rgb = np.asarray(img, dtype=np.uint16)
+    data = (((rgb[..., 0] >> 3) << 11) | ((rgb[..., 1] >> 2) << 5) | (rgb[..., 2] >> 3)).astype("<u2").tobytes()
+    os.makedirs(os.path.dirname(CACHE), exist_ok=True)
+    with open(CACHE, "wb") as f:
+        f.write(data)
+    return data
+
+try:
+    with open(CACHE, "rb") as f:
+        data = f.read()
+except OSError:
+    data = render()
+
+with open("/sys/class/graphics/fb0/blank", "w") as f:
+    f.write("0")
+fd = os.open("/dev/fb0", os.O_RDWR)
+fb = mmap.mmap(fd, LL * H, mmap.MAP_SHARED, mmap.PROT_READ | mmap.PROT_WRITE)
+fb[0:LL * H] = data
+var = bytearray(160)
+fcntl.ioctl(fd, 0x4600, var)                       # FBIOGET_VSCREENINFO
+fcntl.ioctl(fd, 0x4606, var)                       # FBIOPAN_DISPLAY: push the frame out

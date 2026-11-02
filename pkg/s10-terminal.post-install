@@ -1,0 +1,19 @@
+#!/bin/sh
+# Wire up services, the tty1 terminal and the phone user's groups.
+user=$(getent passwd 10000 | cut -d: -f1)
+rc-update -q add local default
+rc-update -q add s10-splash boot
+rm -f /var/cache/s10-terminal/splash.rgb565   # re-rendered on next boot
+rc-update -q add msm-fb-refresher default
+rc-update -q del unudhcpd.usb0 boot 2>/dev/null
+rc-update -q add unudhcpd.rndis0 default
+if [ -n "$user" ]; then
+	for g in video input audio; do addgroup "$user" "$g" 2>/dev/null; done
+	[ -f /etc/inittab.orig ] || cp /etc/inittab /etc/inittab.orig
+	sed -i "s|^tty1::respawn:.*|tty1::respawn:/bin/su -l $user -c /usr/bin/s10-term|" /etc/inittab
+	# no logins on tty2-6: nothing displays them, and switching there leaves fbterm without input
+	sed -i "s|^tty[2-6]::|#&|" /etc/inittab
+	kill -HUP 1 2>/dev/null
+fi
+rc-update -q del s10-syncthing default 2>/dev/null
+exit 0

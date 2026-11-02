@@ -1,0 +1,11 @@
+#!/bin/sh
+# Samsung input booster: raise CPU clocks for ~1 s on touch, as Android does.
+# Android's init enables it; on Linux it starts disabled.
+echo 1 > /sys/class/input_booster/enable_event
+# schedutil: ramp clocks up within 0.5 ms of load (was 4 ms), drop them after
+# 20 ms (was 4 ms), so short bursts like redraws do not run at low clocks.
+for p in /sys/devices/system/cpu/cpufreq/policy*; do
+	echo schedutil > $p/scaling_governor
+	echo 500 > $p/schedutil/up_rate_limit_us
+	echo 20000 > $p/schedutil/down_rate_limit_us
+done

@@ -1,7 +1,7 @@
 From 990d0d15c5a215e2a38c8aad46a1adeece6abef2 Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Sun, 1 Nov 2026 18:20:00 +0100
-Subject: [PATCH 12/31] fbterm: new local package (Debian 1.7-5 patches)
+Subject: [PATCH 12/34] fbterm: new local package (Debian 1.7-5 patches)
 
 ---
  main/fbterm/APKBUILD | 43 +++++++++++++++++++++++++++++++++++++++++++

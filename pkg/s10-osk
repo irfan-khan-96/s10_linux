@@ -1,0 +1,600 @@
+#!/usr/bin/python3
+# On-screen keyboard and touch/button handling for the S10 terminal (fbterm).
+# Draws into the bottom strip of /dev/fb0 that fbterm leaves free
+# (FBTERM_RESERVE_BOTTOM), reads the touchscreen directly and types through a
+# uinput virtual keyboard. Touches above the keyboard drive tmux: swipe up/down
+# scrolls, swipe left/right switches windows, taps become mouse clicks for apps
+# that ask for them (menu, htop, nvim), a tap on the status bar opens the menu.
+# Volume Down: short press shows/hides the keyboard, hold dims; hold Volume Up
+# brightens. Night mode (warm colours, capped brightness) follows /etc/s10-night.
+# Drawing goes through mmap: Samsung's decon driver ignores write() on fb0.
+import datetime, fcntl, glob, mmap, os, select, struct, subprocess, time
+import numpy as np
+from PIL import Image, ImageDraw, ImageFont
+
+W, H_SCREEN = 1440, 3040
+KB_H = int(os.environ.get("S10_OSK_HEIGHT", "1100"))
+TOP = H_SCREEN - KB_H
+LL = W * 2                                  # RGB565, 2 bytes per pixel
+TOUCH = "/dev/input/s10-touchscreen"
+FONT = "/usr/share/fonts/jetbrains-mono/JetBrainsMono-Regular.ttf"
+VIBRATOR = "/sys/class/timed_output/vibrator/enable"
+BLANKED = "/run/s10-blanked"                # written by s10-idle-blank
+TMUX = ["tmux", "-S", "/tmp/tmux-10000/default"]   # the phone user's tmux server
+
+# Linux key codes (input-event-codes.h)
+K = dict(ESC=1, BKSP=14, TAB=15, ENTER=28, CTRL=29, SHIFT=42, ALT=56, SPACE=57,
+         UP=103, LEFT=105, RIGHT=106, DOWN=108, PGUP=104, PGDN=109)
+LETTERS = dict(zip("qwertyuiop", range(16, 26)), **dict(zip("asdfghjkl", range(30, 39))),
+               **dict(zip("zxcvbnm", range(44, 51))))
+DIGITS = dict(zip("1234567890", range(2, 12)))
+SYMBOLS = {"-": (12, 0), "_": (12, 1), "=": (13, 0), "+": (13, 1), "[": (26, 0), "{": (26, 1),
+           "]": (27, 0), "}": (27, 1), ";": (39, 0), ":": (39, 1), "'": (40, 0), '"': (40, 1),
+           "`": (41, 0), "~": (41, 1), "\\": (43, 0), "|": (43, 1), ",": (51, 0), "<": (51, 1),
+           ".": (52, 0), ">": (52, 1), "/": (53, 0), "?": (53, 1), " ": (57, 0)}
+SYMBOLS.update({s: (DIGITS[d], 1) for s, d in zip("!@#$%^&*()", "1234567890")})
+# long-press alternatives, shown small in the key's corner
+LONG = dict(zip("qwertyuiop", "1234567890"), a="@", s="#", d="$", f="%", g="&", h="*",
+            j="(", k=")", l="'", z="!", x='"', c=":", v=";", b=",", n="?", m="_")
+
+def char_key(c):
+    if c in LETTERS: return LETTERS[c], False
+    if c.lower() in LETTERS: return LETTERS[c.lower()], True
+    if c in DIGITS: return DIGITS[c], False
+    code, shift = SYMBOLS[c]; return code, bool(shift)
+
+# Layouts: list of rows; each key is (label, action, width). action: "c:<char>"
+# types a character, "k:<NAME>" a key, "m:<NAME>" toggles a modifier, "l:<layer>".
+def row(chars): return [(c, "c:" + c, 1) for c in chars]
+FN = [("Esc", "k:ESC", 1), ("Tab", "k:TAB", 1), ("Ctrl", "m:CTRL", 1.2), ("Alt", "m:ALT", 1),
+      ("←", "k:LEFT", 1), ("↓", "k:DOWN", 1), ("↑", "k:UP", 1), ("→", "k:RIGHT", 1)]
+LAYERS = {
+    "abc": [FN, row("1234567890"), row("qwertyuiop"), row("asdfghjkl"),
+            [("⇧", "m:SHIFT", 1.5)] + row("zxcvbnm") + [("⌫", "k:BKSP", 1.5)],
+            [("?123", "l:sym", 1.5), ("-", "c:-", 1), ("/", "c:/", 1), ("", "c: ", 4.5),
+             (".", "c:.", 1), ("⏎", "k:ENTER", 1.8)]],
+    "sym": [FN, row("!@#$%^&*()"), row("-_=+[]{};"), row(":'\"`~|\\<>"),
+            [("⇧", "m:SHIFT", 1.5)] + row(",.?/$&*") + [("⌫", "k:BKSP", 1.5)],
+            [("abc", "l:abc", 1.5), ("PgUp", "k:PGUP", 1.3), ("PgDn", "k:PGDN", 1.3), ("", "c: ", 3.4),
+             ("|", "c:|", 1), ("⏎", "k:ENTER", 1.8)]],
+}
+REPEATABLE = {"k:BKSP", "k:LEFT", "k:RIGHT", "k:UP", "k:DOWN"}
+LONG_PRESS, REPEAT_DELAY, REPEAT_EVERY = 0.40, 0.45, 0.06
+SPACE_STEP = 45                             # px of space-bar swipe per cursor step
+
+# s10 theme: true black, accent = palette colour 12 (#7aa6da), shared with tmux and the menu
+BG, KEY, SPECIAL, TEXT, HINT = (0, 0, 0), (30, 30, 34), (46, 46, 52), (225, 225, 225), (120, 120, 132)
+ACCENT, ACTIVE = (122, 166, 218), (52, 84, 120)
+PAD = 10
+
+class Keyboard:
+    def __init__(self):
+        fd = os.open("/dev/fb0", os.O_RDWR)
+        self.fb = mmap.mmap(fd, LL * H_SCREEN, mmap.MAP_SHARED, mmap.PROT_READ | mmap.PROT_WRITE)
+        self.font = ImageFont.truetype(FONT, 58)
+        self.small = ImageFont.truetype(FONT, 42)
+        self.tiny = ImageFont.truetype(FONT, 28)
+        self.big = ImageFont.truetype(FONT, 96)
+        self.layer, self.mods = "abc", set()
+        self.pressed = None                      # action of the key under the finger
+        self.alt = None                          # long-press alternative being shown
+        self.uinput = self.make_uinput()
+        self.layout()
+        self.draw()
+
+    # ---- output: uinput virtual keyboard ----
+    def make_uinput(self):
+        fd = os.open("/dev/uinput", os.O_WRONLY | os.O_NONBLOCK)
+        fcntl.ioctl(fd, 0x40045564, 1)                       # UI_SET_EVBIT EV_KEY
+        for code in range(1, 120):
+            fcntl.ioctl(fd, 0x40045565, code)                # UI_SET_KEYBIT
+        dev = struct.pack("80sHHHHi", b"s10-osk", 0x06, 0x1234, 0x5678, 1, 0) + b"\0" * (4 * 64 * 4)
+        os.write(fd, dev)
+        fcntl.ioctl(fd, 0x5501)                              # UI_DEV_CREATE
+        time.sleep(0.3)
+        return fd
+
+    def emit(self, code, value):
+        os.write(self.uinput, struct.pack("qqHHi", 0, 0, 1, code, value))
+        os.write(self.uinput, struct.pack("qqHHi", 0, 0, 0, 0, 0))   # SYN_REPORT
+
+    def tap(self, code, shift=False):
+        held = [K[m] for m in ("CTRL", "ALT") if m in self.mods]
+        if shift or "SHIFT" in self.mods: held.append(K["SHIFT"])
+        for m in held: self.emit(m, 1)
+        self.emit(code, 1); self.emit(code, 0)
+        for m in reversed(held): self.emit(m, 0)
+
+    # ---- layout and drawing ----
+    def layout(self):
+        rows = LAYERS[self.layer]
+        self.rh = (KB_H - PAD) / len(rows)
+        self.keys = []
+        for r, keys in enumerate(rows):
+            units = sum(k[2] for k in keys)
+            uw = (W - PAD) / max(units, 10)
+            x = (W - units * uw) / 2 + PAD / 2
+            for label, action, width in keys:
+                box = (int(x + PAD / 2), int(r * self.rh + PAD), int(x + width * uw - PAD / 2), int((r + 1) * self.rh))
+                self.keys.append((box, label, action))
+                x += width * uw
+
+    def key_colour(self, action):
+        if self.pressed == action: return ACCENT
+        if action.startswith("m:") and action[2:] in self.mods: return ACTIVE
+        return KEY if action.startswith("c:") and len(action) == 3 and action[2] != " " else SPECIAL
+
+    def label(self, label):
+        if "SHIFT" in self.mods and len(label) == 1 and label.isalpha(): return label.upper()
+        return label
+
+    def render(self):
+        img = Image.new("RGB", (W, KB_H), BG)
+        d = ImageDraw.Draw(img)
+        for box, label, action in self.keys:
+            d.rounded_rectangle(box, radius=18, fill=self.key_colour(action))
+            text = self.label(label)
+            font = self.font if len(text) <= 2 else self.small
+            cx, cy = (box[0] + box[2]) / 2, (box[1] + box[3]) / 2
+            d.text((cx, cy), text, font=font, fill=TEXT, anchor="mm")
+            if self.layer == "abc" and label in LONG:
+                d.text((box[2] - 12, box[1] + 8), LONG[label], font=self.tiny, fill=HINT, anchor="ra")
+        if self.pressed and self.pressed.startswith("c:") and self.pressed != "c: ":
+            self.render_popup(d)
+        return img
+
+    def render_popup(self, d):
+        """Enlarged bubble above the pressed key (its long-press symbol once held)."""
+        for box, label, action in self.keys:
+            if action == self.pressed:
+                break
+        text = self.alt or self.label(label)
+        w, h = (box[2] - box[0]) * 1.5, self.rh * 1.25
+        cx = min(max((box[0] + box[2]) / 2, w / 2 + PAD), W - w / 2 - PAD)
+        bottom = box[1] - PAD
+        top = max(bottom - h, PAD)
+        if top == PAD:                            # no room above (top rows): cover the key itself
+            top, bottom = box[1] - PAD / 2, box[3] + PAD / 2
+        d.rounded_rectangle((cx - w / 2, top, cx + w / 2, bottom), radius=24, fill=ACCENT)
+        d.text((cx, (top + bottom) / 2), text, font=self.big, fill=BG, anchor="mm")
+
+    def draw(self):
+        rgb = np.asarray(self.render(), dtype=np.uint16)
+        rgb565 = ((rgb[..., 0] >> 3) << 11) | ((rgb[..., 1] >> 2) << 5) | (rgb[..., 2] >> 3)
+        self.fb[TOP * LL:(TOP + KB_H) * LL] = rgb565.astype("<u2").tobytes()
+
+    def splash(self, text, rotation):
+        """Full-screen message (shown while fbterm restarts), drawn for the coming orientation."""
+        cw, ch = (H_SCREEN, W) if rotation in (1, 3) else (W, H_SCREEN)
+        img = Image.new("RGB", (cw, ch), BG)
+        d = ImageDraw.Draw(img)
+        d.text((cw / 2, ch / 2), text, font=self.big, fill=ACCENT, anchor="mm")
+        if rotation == 1: img = img.transpose(Image.Transpose.ROTATE_270)
+        elif rotation == 3: img = img.transpose(Image.Transpose.ROTATE_90)
+        rgb = np.asarray(img, dtype=np.uint16)
+        rgb565 = ((rgb[..., 0] >> 3) << 11) | ((rgb[..., 1] >> 2) << 5) | (rgb[..., 2] >> 3)
+        self.fb[0:H_SCREEN * LL] = rgb565.astype("<u2").tobytes()
+
+    # ---- input ----
+    def key_at(self, x, y):
+        for box, label, action in self.keys:
+            if box[0] - PAD <= x <= box[2] + PAD and box[1] - PAD <= y <= box[3] + PAD:
+                return action
+        return None
+
+    def press(self, action, text=None):
+        kind, arg = action[0], action[2:]
+        if kind == "m":
+            self.mods ^= {arg}
+        elif kind == "l":
+            self.layer = arg; self.layout()
+        else:
+            if kind == "c":
+                code, shift = char_key(text or arg); self.tap(code, shift)
+            else:
+                self.tap(K[arg])
+            self.mods -= {"SHIFT", "CTRL", "ALT"}       # one-shot modifiers
+        buzz()
+
+def buzz():
+    try:
+        with open(VIBRATOR, "w") as f: f.write("12")
+    except OSError:
+        pass
+
+def tmux(*args, out=False):
+    r = subprocess.run(TMUX + list(args), capture_output=True, text=True)
+    return r.stdout.strip() if out else None
+
+RESERVE = "/run/s10-osk-reserve"     # pixels fbterm leaves free (FBTERM_RESERVE_FILE)
+SHOWN, HIDDEN_PX = KB_H, 1            # 1, not 0: fbterm keeps scrolling by redraw
+KEY_VOLUMEDOWN, KEY_VOLUMEUP = 114, 115
+ROTATE = "/run/s10-rotate"           # fbterm --screen-rotate value, read by s10-term
+LANDSCAPE_CONF = "/etc/s10-landscape"  # 1 = 90° clockwise (default), 3 = counter-clockwise, 0 = off
+
+def landscape_rotation():
+    try:
+        with open(LANDSCAPE_CONF) as f:
+            return int(f.read().split()[0])
+    except (OSError, ValueError, IndexError):
+        return 1
+
+def restart_terminal():
+    """Restart fbterm (inittab respawns s10-term, tmux reattaches); wait until it is back."""
+    old = subprocess.run(["pgrep", "-x", "fbterm"], capture_output=True, text=True).stdout.split()
+    subprocess.run(["pkill", "-x", "fbterm"])
+    for _ in range(50):
+        time.sleep(0.1)
+        new = subprocess.run(["pgrep", "-x", "fbterm"], capture_output=True, text=True).stdout.split()
+        if new and new != old:
+            time.sleep(0.5)                        # fbterm clears the screen as it starts
+            return
+
+def reserved():
+    try:
+        with open(RESERVE) as f:
+            return int(f.read())
+    except (OSError, ValueError):
+        return SHOWN
+
+def hardware_keyboard():
+    """True if a USB keyboard (with letter keys) is plugged in."""
+    for dev in glob.glob("/sys/class/input/event*/device"):
+        try:
+            if int(open(dev + "/id/bustype").read(), 16) != 0x03:   # BUS_USB
+                continue
+            words = open(dev + "/capabilities/key").read().split()
+            bits = int("".join(w.zfill(16) for w in words), 16)
+            if bits >> 30 & 1 and bits >> 44 & 1:                    # KEY_A and KEY_Z
+                return True
+        except (OSError, ValueError):
+            pass
+    return False
+
+class Display:
+    """Backlight steps (Volume keys) and night mode (warm mDNIe colours, capped brightness)."""
+    BACKLIGHT = "/sys/class/backlight/panel/brightness"
+    NIGHT = "/sys/class/mdnie/mdnie/night_mode"
+    SAVED = "/var/lib/s10-terminal/brightness"
+    CONF = "/etc/s10-night"                  # "22 7" = night from 22:00 to 07:00; "off" disables
+    LEVELS = [400, 800, 1600, 3200, 6400, 12800, 25600, 48600]
+    NIGHT_CAP, NIGHT_LEVEL = 1600, 2
+
+    def __init__(self):
+        self.level = self.read_saved()
+        self.night = None
+        self.check_night()
+
+    def read_saved(self):
+        try:
+            with open(self.SAVED) as f:
+                value = int(f.read())
+        except (OSError, ValueError):
+            value = 12800
+        return min(range(len(self.LEVELS)), key=lambda i: abs(self.LEVELS[i] - value))
+
+    def write(self, path, value):
+        try:
+            with open(path, "w") as f:
+                f.write(value)
+        except OSError:
+            pass
+
+    def apply(self):
+        value = self.LEVELS[self.level]
+        if self.night:
+            value = min(value, self.NIGHT_CAP)
+        self.write(self.BACKLIGHT, str(value))
+
+    def step(self, delta):
+        new = min(max(self.level + delta, 0), len(self.LEVELS) - 1)
+        if new == self.level:
+            return
+        self.level = new
+        os.makedirs(os.path.dirname(self.SAVED), exist_ok=True)
+        self.write(self.SAVED, str(self.LEVELS[new]))
+        self.apply()
+        bar = "█" * (new + 1) + "░" * (len(self.LEVELS) - new - 1)
+        tmux("display-message", "-d", "1200", f"Brightness {bar}" + ("  (night)" if self.night else ""))
+
+    def check_night(self):
+        try:
+            with open(self.CONF) as f:
+                conf = f.read().split()
+        except OSError:
+            conf = ["22", "7"]
+        if conf[:1] == ["off"]:
+            night = False
+        else:
+            start, end = int(conf[0]), int(conf[1])
+            hour = datetime.datetime.now().hour
+            night = (start <= hour or hour < end) if start > end else (start <= hour < end)
+        if night != self.night:
+            self.night = night
+            self.write(self.NIGHT, f"1 {self.NIGHT_LEVEL}" if night else "0 0")
+            self.apply()
+
+class Visibility:
+    """Hide the keyboard while a USB keyboard is attached; Volume Down toggles.
+    fbterm resizes in place on SIGWINCH after reading RESERVE. With a USB keyboard
+    the terminal also turns to landscape (fbterm restarts for that)."""
+    def __init__(self, kb, display):
+        self.kb, self.display, self.manual, self.next_scan = kb, display, None, 0
+        self.held = {}                             # volume key -> [pressed at, last step, stepped]
+        self.usb = hardware_keyboard()
+        self.landscape = os.path.exists(ROTATE)
+        self.visible = reserved() != HIDDEN_PX and not self.landscape   # what the terminal uses
+        self.keys_fd = None
+        for dev in glob.glob("/sys/class/input/event*"):
+            try:
+                if open(dev + "/device/name").read().strip() == "gpio_keys":
+                    self.keys_fd = os.open("/dev/input/" + os.path.basename(dev), os.O_RDONLY)
+            except OSError:
+                pass
+        if self.landscape != (self.usb and landscape_rotation() != 0):
+            self.follow_usb()
+        elif self.visible == self.usb:
+            self.apply(not self.usb)
+        elif not self.visible:
+            self.kb.fb[TOP * LL:(TOP + KB_H) * LL] = bytes(KB_H * LL)   # Keyboard() drew it
+
+    def rotation(self):
+        try:
+            with open(ROTATE) as f:
+                return int(f.read())
+        except (OSError, ValueError):
+            return 0
+
+    def poll(self, now):
+        if now < self.next_scan:
+            return
+        self.next_scan = now + 2
+        self.display.check_night()
+        usb = hardware_keyboard()
+        if usb != self.usb:
+            self.usb, self.manual = usb, None          # plugging in or out resets the toggle
+            self.follow_usb()
+
+    def follow_usb(self):
+        """USB keyboard in: keyboard hidden, landscape. Out: portrait, keyboard shown."""
+        rotation = landscape_rotation() if self.usb else 0
+        if rotation:
+            self.apply(False)
+            with open(ROTATE, "w") as f:
+                f.write(str(rotation))
+            self.landscape = True
+            self.kb.splash("↻", rotation)
+            restart_terminal()
+        else:
+            if self.landscape:
+                os.remove(ROTATE)
+                self.landscape = False
+                self.kb.splash("↻", 0)
+                restart_terminal()
+            self.apply(not self.usb)
+
+    def on_button(self, now):
+        data = os.read(self.keys_fd, 24 * 16)
+        for i in range(0, len(data), 24):
+            _, _, etype, code, value = struct.unpack("qqHHi", data[i:i + 24])
+            if etype != 1 or code not in (KEY_VOLUMEDOWN, KEY_VOLUMEUP):
+                continue
+            if value == 1:
+                self.held[code] = [now, now, False, screen_waking(now)]
+            elif value == 0 and code in self.held:
+                since, _, stepped, waking = self.held.pop(code)
+                # short Volume Down: show/hide the keyboard (portrait only)
+                if code == KEY_VOLUMEDOWN and not stepped and not waking and not self.landscape:
+                    self.manual = not self.visible
+                    self.apply(self.manual)
+
+    def tick(self, now):
+        """While a volume key is held: step the brightness every 0.3 s after 0.5 s."""
+        for code, state in self.held.items():
+            since, last, stepped, waking = state
+            if not waking and now - since > 0.5 and now - last > 0.3:
+                self.display.step(-1 if code == KEY_VOLUMEDOWN else 1)
+                state[1], state[2] = now, True
+
+    def apply(self, visible):
+        self.visible = visible
+        with open(RESERVE, "w") as f:
+            f.write(str(SHOWN if visible else HIDDEN_PX))
+        if not visible:
+            self.kb.fb[TOP * LL:(TOP + KB_H) * LL] = bytes(KB_H * LL)   # clear the strip
+        subprocess.run(["pkill", "-WINCH", "-x", "fbterm"])  # fbterm re-reads RESERVE
+        if visible:
+            time.sleep(0.05)                               # let fbterm stop drawing there
+            self.kb.draw()
+
+class Gestures:
+    """Touches on the terminal: vertical drag scrolls, horizontal swipe switches tmux
+    windows, a tap is a mouse click for apps that enabled the mouse (status bar: menu)."""
+    def __init__(self, vis):
+        self.vis = vis
+        self.active = False
+
+    def content(self, x, y):
+        """Physical touch point -> terminal pixel coordinates and terminal size."""
+        r = self.vis.rotation() if self.vis.landscape else 0
+        if r == 1: return y, W - 1 - x, H_SCREEN, W
+        if r == 3: return H_SCREEN - 1 - y, x, H_SCREEN, W
+        return x, y, W, (TOP if self.vis.visible else H_SCREEN)
+
+    def start(self, x, y, now):
+        info = tmux("display-message", "-p", "#{client_width} #{client_height} #{pane_top} #{pane_left} "
+                    "#{mouse_any_flag} #{mouse_sgr_flag} #{alternate_on} #{pane_id}", out=True).split()
+        if len(info) != 8:
+            self.active = False
+            return
+        cols, rows, ptop, pleft, mouse, sgr, alt = map(int, info[:7])
+        self.pane, self.mouse, self.sgr, self.alt = info[7], mouse, sgr, alt
+        self.ptop, self.pleft = ptop, pleft
+        cx, cy, cw, ch = self.content(x, y)
+        self.cell_w, self.cell_h = cw // cols, ch // rows
+        self.x0, self.y0, self.t0, self.lines, self.mode = cx, cy, now, 0, None
+        self.active = True
+
+    def move(self, x, y, now):
+        if not self.active:
+            return
+        cx, cy, _, _ = self.content(x, y)
+        dx, dy = cx - self.x0, cy - self.y0
+        if self.mode is None and max(abs(dx), abs(dy)) > 40:
+            self.mode = "scroll" if abs(dy) > abs(dx) else "swipe"
+        if self.mode == "scroll":
+            lines = int(dy / self.cell_h)
+            if lines != self.lines:
+                self.scroll(lines - self.lines)
+                self.lines = lines
+
+    def end(self, x, y, now):
+        if not self.active:
+            return
+        self.active = False
+        cx, cy, _, _ = self.content(x, y)
+        dx, dy = cx - self.x0, cy - self.y0
+        if self.mode == "swipe" and abs(dx) > 250 and now - self.t0 < 0.8:
+            tmux("next-window" if dx < 0 else "previous-window")
+        elif self.mode is None and now - self.t0 < 0.6:
+            self.tap(self.x0 // self.cell_w, self.y0 // self.cell_h)
+
+    def scroll(self, n):
+        """n > 0: finger moved down -> show older lines."""
+        if self.mouse and self.alt:                  # full-screen app with mouse: wheel events
+            button = 64 if n > 0 else 65
+            self.send_mouse(button, 0, 0, abs(n))
+        elif n > 0:
+            tmux("copy-mode", "-e")
+            tmux("send-keys", "-X", "-N", str(n), "scroll-up")
+        else:
+            tmux("send-keys", "-X", "-N", str(-n), "scroll-down")   # leaves copy mode at the bottom (-e)
+
+    def tap(self, col, row):
+        if row == 0:                                 # status bar: home
+            tmux("select-window", "-t", "menu")
+            buzz()
+            return
+        if self.mouse:
+            self.send_mouse(0, col - self.pleft, row - 1 - self.ptop, 1)
+            buzz()
+
+    def send_mouse(self, button, col, row, count):
+        if self.sgr:
+            seq = (f"\x1b[<{button};{col + 1};{row + 1}M" +
+                   ("" if button >= 64 else f"\x1b[<{button};{col + 1};{row + 1}m"))
+        else:
+            enc = lambda b: f"\x1b[M{chr(32 + b)}{chr(33 + col)}{chr(33 + row)}"
+            seq = enc(button) + ("" if button >= 64 else enc(3))
+        tmux("send-keys", "-t", self.pane, "-l", seq * count)
+
+def screen_waking(now):
+    """True while the screen is off or was woken less than 0.7 s ago."""
+    try:
+        with open(BLANKED) as f:
+            if f.read().strip() == "1":
+                return True
+        return time.time() - os.path.getmtime(BLANKED) < 0.7
+    except OSError:
+        return False
+
+class Touch:
+    """Routes one finger: keyboard strip (types on release, long-press symbol,
+    space-bar swipe moves the cursor, repeat for Backspace/arrows) or terminal gestures."""
+    def __init__(self, kb, vis, gestures):
+        self.kb, self.vis, self.gestures = kb, vis, gestures
+        self.target = None
+
+    def down(self, x, y, now):
+        if screen_waking(now):                       # this touch only wakes the screen
+            self.target = "ignore"
+            return
+        if self.vis.visible and y >= TOP:
+            action = self.kb.key_at(x, y - TOP)
+            if not action:
+                self.target = "ignore"
+                return
+            self.target, self.since, self.last, self.x0, self.steps = "key", now, now, x, 0
+            self.kb.pressed, self.kb.alt = action, None
+            if not action.startswith("c:"):         # modifiers, layers, special keys: at once
+                self.kb.press(action)
+            self.kb.draw()
+        else:
+            self.target = "term"
+            self.gestures.start(x, y, now)
+
+    def move(self, x, y, now):
+        if self.target == "term":
+            self.gestures.move(x, y, now)
+        elif self.target == "key" and self.kb.pressed == "c: ":
+            steps = int((x - self.x0) / SPACE_STEP)
+            while self.steps != steps:              # space-bar swipe: cursor left/right
+                self.kb.tap(K["RIGHT"] if steps > self.steps else K["LEFT"])
+                self.steps += 1 if steps > self.steps else -1
+                buzz()
+
+    def up(self, x, y, now):
+        if self.target == "term":
+            self.gestures.end(x, y, now)
+        elif self.target == "key":
+            action = self.kb.pressed
+            if action.startswith("c:") and not (action == "c: " and self.steps):
+                self.kb.press(action, self.kb.alt)
+            self.kb.pressed = self.kb.alt = None
+            self.kb.draw()
+        self.target = None
+
+    def hold(self, now):
+        """Called while a key is held: long-press symbol, key repeat."""
+        if self.target != "key":
+            return
+        action = self.kb.pressed
+        label = action[2:]
+        if action.startswith("c:") and self.kb.alt is None and self.kb.layer == "abc" \
+                and label in LONG and now - self.since > LONG_PRESS:
+            self.kb.alt = LONG[label]
+            buzz(); self.kb.draw()
+        elif action in REPEATABLE and now - self.since > REPEAT_DELAY and now - self.last > REPEAT_EVERY:
+            self.kb.press(action); self.last = now
+
+    def waiting(self):
+        return self.target == "key"
+
+def main():
+    kb = Keyboard()
+    display = Display()
+    vis = Visibility(kb, display)
+    touch = Touch(kb, vis, Gestures(vis))
+    tfd = os.open(TOUCH, os.O_RDONLY)
+    x = y = None
+    down = was_down = False
+    slot = 0
+    while True:
+        timeout = 0.03 if touch.waiting() or vis.held else 2.0
+        fds = [tfd] + ([vis.keys_fd] if vis.keys_fd is not None else [])
+        r, _, _ = select.select(fds, [], [], timeout)
+        now = time.monotonic()
+        vis.poll(now)
+        if vis.keys_fd is not None and vis.keys_fd in r:
+            vis.on_button(now)
+        vis.tick(now)
+        touch.hold(now)
+        if tfd not in r:
+            continue
+        data = os.read(tfd, 24 * 64)
+        for i in range(0, len(data), 24):
+            _, _, etype, code, value = struct.unpack("qqHHi", data[i:i + 24])
+            if etype == 3:                                  # EV_ABS
+                if code == 0x2f: slot = value
+                elif slot != 0: continue                    # first finger only
+                elif code == 0x39: down = value >= 0
+                elif code == 0x35: x = value * W // 4096
+                elif code == 0x36: y = value * H_SCREEN // 4096
+            elif etype == 0 and code == 0 and x is not None and y is not None:   # SYN_REPORT
+                if down and not was_down: touch.down(x, y, now)
+                elif down: touch.move(x, y, now)
+                elif was_down: touch.up(x, y, now)
+                was_down = down
+
+if __name__ == "__main__":
+    main()

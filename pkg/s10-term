@@ -1,0 +1,27 @@
+#!/bin/sh
+# Terminal session for tty1: fbterm + tmux above the on-screen keyboard.
+# s10-osk writes the keyboard height (1 while hidden) to the reserve file and
+# sends fbterm SIGWINCH, so fbterm resizes without restarting. With a USB
+# keyboard s10-osk writes the rotation to /run/s10-rotate and restarts fbterm
+# in landscape (no on-screen keyboard there, so nothing is reserved).
+[ -f "$HOME/.fbtermrc" ] || cp /usr/share/s10-terminal/fbtermrc "$HOME/.fbtermrc"
+export TERM=fbterm
+export FBTERM_RESERVE_FILE=/run/s10-osk-reserve
+rotate="$(cat /run/s10-rotate 2>/dev/null || echo 0)"
+if [ "$rotate" != 0 ]; then
+	export FBTERM_RESERVE_BOTTOM=0
+	size=40                     # landscape has room for a slightly larger font
+else
+	export FBTERM_RESERVE_BOTTOM="$(cat "$FBTERM_RESERVE_FILE" 2>/dev/null || echo 1100)"
+	size=36
+fi
+# s10 palette (Tomorrow Night on true black), set with fbterm's "ESC [ 3 ; n ; r ; g ; b }".
+# Colour 12 is the accent that tmux, the menu and the on-screen keyboard share.
+palette='0;0;0;0 1;204;102;102 2;181;189;104 3;240;198;116 4;129;162;190 5;178;148;187
+6;138;190;183 7;197;200;198 8;102;102;110 9;213;78;83 10;185;202;74 11;231;197;71
+12;122;166;218 13;195;151;216 14;112;192;177 15;234;234;234'
+seq=""
+for c in $palette; do seq="$seq\033[3;$c}"; done
+# fbterm hands its child TERM=linux (8 colours); tmux must see TERM=fbterm (256 colours).
+exec fbterm --screen-rotate="$rotate" --font-size="$size" -- \
+	sh -c "printf '$seq\033[2J'; TERM=fbterm exec tmux new -A -s main -n menu s10-menu"

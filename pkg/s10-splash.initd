@@ -1,0 +1,14 @@
+#!/sbin/openrc-run
+# Boot splash on the S10 panel (s10-splash), as early as /usr and /var are mounted.
+description="S10 boot splash"
+
+depend() {
+	need localmount
+	before networkmanager sshd local
+}
+
+start() {
+	ebegin "Showing boot splash"
+	/usr/bin/s10-splash
+	eend $?
+}

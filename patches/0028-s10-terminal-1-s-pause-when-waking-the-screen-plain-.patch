@@ -1,7 +1,7 @@
 From 7d9ead12b4934f9c58df25d2a75f45940087ec2c Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Sun, 1 Nov 2026 23:59:41 +0100
-Subject: [PATCH 28/31] s10-terminal: 1 s pause when waking the screen, plain
+Subject: [PATCH 28/34] s10-terminal: 1 s pause when waking the screen, plain
  unblank at startup
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

@@ -1,0 +1,30 @@
+#!/bin/sh
+# tmux status-right for the S10 terminal: Wi-Fi bars, battery (charging, low warning), clock.
+# Prints tmux style codes; colours come from the s10 palette (12 = accent, 9 = red).
+B=/sys/class/power_supply/battery
+cap=$(cat $B/capacity 2>/dev/null || echo 0)
+status=$(cat $B/status 2>/dev/null)
+
+signal=$(nmcli -t -f in-use,signal dev wifi list --rescan no 2>/dev/null | sed -n 's/^\*://p' | head -1)
+if [ -z "$signal" ]; then
+	wifi="#[fg=colour8]no wifi"
+else
+	bars=""
+	for t in 1 30 55 80; do
+		if [ "$signal" -ge "$t" ]; then bars="$bars#[fg=colour7]"; else bars="$bars#[fg=colour8]"; fi
+		case $t in 1) bars="$bars▂";; 30) bars="$bars▄";; 55) bars="$bars▆";; 80) bars="$bars█";; esac
+	done
+	wifi="$bars"
+fi
+
+if [ "$status" = Charging ] || [ "$status" = Full ]; then
+	bat="#[fg=colour10]+$cap%"
+elif [ "$cap" -le 15 ]; then
+	bat="#[bg=colour9,fg=colour0,bold] LOW $cap% #[bg=default,nobold]"
+elif [ "$cap" -le 30 ]; then
+	bat="#[fg=colour11]$cap%"
+else
+	bat="#[fg=colour7]$cap%"
+fi
+
+printf '%s  %s  #[fg=colour7]%s ' "$wifi" "$bat" "$(date +%H:%M)"
