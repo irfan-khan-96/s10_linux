@@ -1,7 +1,7 @@
 From 4d5d69ff3cac06f1ad85b29b93f909dbd120d2df Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Mon, 2 Nov 2026 01:07:18 +0100
-Subject: [PATCH 34/39] s10-terminal: TERM=fbterm for tmux and keep the palette
+Subject: [PATCH 34/41] s10-terminal: TERM=fbterm for tmux and keep the palette
  (256 colours)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

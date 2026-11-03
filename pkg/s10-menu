@@ -209,6 +209,8 @@ class Home:
             self.draw()
             self.scr.timeout(30000)                # refresh the clock and battery
             k = self.scr.getch()
+            while k == -1 and read("/run/s10-blanked") == "1":
+                k = self.scr.getch()               # screen off: no redraws (no nmcli calls)
             if k == -1:
                 continue
             if k == curses.KEY_MOUSE:

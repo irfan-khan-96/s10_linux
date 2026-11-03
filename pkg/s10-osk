@@ -582,6 +582,13 @@ class Gestures:
             seq = enc(button) + ("" if button >= 64 else enc(3))
         tmux("send-keys", "-t", self.pane, "-l", seq * count)
 
+def screen_off():
+    try:
+        with open(BLANKED) as f:
+            return f.read().strip() == "1"
+    except OSError:
+        return False
+
 def screen_waking(now):
     """True while the screen is off or was woken less than 0.7 s ago."""
     try:
@@ -691,7 +698,8 @@ def main():
     down = was_down = False
     slot = 0
     while True:
-        timeout = 0.03 if touch.waiting() or vis.held else 2.0
+        # held key: fast ticks; screen off: rare checks (touch and buttons still wake select)
+        timeout = 0.03 if touch.waiting() or vis.held else (30.0 if screen_off() else 2.0)
         fds = [tfd] + ([vis.keys_fd] if vis.keys_fd is not None else [])
         r, _, _ = select.select(fds, [], [], timeout)
         now = time.monotonic()

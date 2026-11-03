@@ -1,7 +1,7 @@
 From 09c73255b5bf1110de6560840cd37bddd391459a Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Mon, 2 Nov 2026 01:49:21 +0100
-Subject: [PATCH 37/39] s10-terminal: amber phosphor look, S10 VT font,
+Subject: [PATCH 37/41] s10-terminal: amber phosphor look, S10 VT font,
  scanlines, faster keyboard, no stuck scroll mode
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

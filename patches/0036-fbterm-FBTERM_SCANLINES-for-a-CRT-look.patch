@@ -1,7 +1,7 @@
 From 422c1876d055d081b20d8bc77e7d24ad12cdb352 Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Mon, 2 Nov 2026 01:46:38 +0100
-Subject: [PATCH 36/39] fbterm: FBTERM_SCANLINES for a CRT look
+Subject: [PATCH 36/41] fbterm: FBTERM_SCANLINES for a CRT look
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---

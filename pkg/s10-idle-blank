@@ -3,22 +3,81 @@
 # first key press, touch or button (USB keyboards may be plugged in at any time).
 # DIM seconds before that the backlight drops to a fifth, so the screen fades
 # instead of cutting out; any input restores it.
-import glob, os, select, time
+#
+# While the screen is off the phone stays reachable (SSH, Samba) but saves power:
+# the display refresher and screen-only monitors (htop, top) are paused, cores 4-7
+# go offline, Wi-Fi power saving is on, the touch booster and tmux status polling
+# are off. Everything is restored on wake. Battery readings are logged every 5 min
+# while off to /var/log/s10-power.log, to check the standby drain.
+import glob, os, select, subprocess, time
 
 IDLE = int(os.environ.get("S10_IDLE_SECONDS", "120"))
 DIM = 10
 BLANK = "/sys/class/graphics/fb0/blank"
 BACKLIGHT = "/sys/class/backlight/panel/brightness"
+BATTERY = "/sys/class/power_supply/battery"
+POWER_LOG = "/var/log/s10-power.log"
+BIG_CORES = (4, 5, 6, 7)                       # mid (A75) and big (M4) clusters
+# Frozen while the screen is off. Names as in /proc/<pid>/comm, which the kernel cuts
+# to 15 characters. They are frozen with the cgroup-v1 freezer, not SIGSTOP: tmux sends
+# SIGCONT to a pane process as soon as it sees it stopped.
+PAUSE_WHEN_OFF = ("msm-fb-refreshe", "htop", "top", "btop")
+FREEZER = "/run/s10-freezer"
+TMUX = ["tmux", "-S", "/tmp/tmux-10000/default"]
+
+def read(path, default=None):
+    try:
+        with open(path) as f:
+            return f.read().strip()
+    except OSError:
+        return default
+
+def write(path, value):
+    try:
+        with open(path, "w") as f:
+            f.write(value)
+    except OSError:
+        pass
 
 def backlight(value=None):
-    try:
-        if value is None:
-            with open(BACKLIGHT) as f:
-                return int(f.read())
-        with open(BACKLIGHT, "w") as f:
-            f.write(str(value))
-    except (OSError, ValueError):
-        return None
+    if value is None:
+        v = read(BACKLIGHT)
+        return int(v) if v and v.isdigit() else None
+    write(BACKLIGHT, str(value))
+
+def run(*args):
+    subprocess.run(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+def freezer():
+    """Mount the (otherwise unused) cgroup-v1 freezer and return its 'paused' group."""
+    group = f"{FREEZER}/paused"
+    if not os.path.exists(f"{group}/freezer.state"):
+        os.makedirs(FREEZER, exist_ok=True)
+        if FREEZER not in read("/proc/mounts", ""):
+            run("mount", "-t", "cgroup", "-o", "freezer", "s10-freezer", FREEZER)
+        os.makedirs(group, exist_ok=True)
+    return group
+
+def freeze(on):
+    group = freezer()
+    if on:
+        for d in glob.glob("/proc/[0-9]*"):
+            if read(f"{d}/comm") in PAUSE_WHEN_OFF:
+                write(f"{group}/cgroup.procs", os.path.basename(d))
+    write(f"{group}/freezer.state", "FROZEN" if on else "THAWED")
+
+def power_saving(on):
+    """Screen off: pause what only matters on screen and idle the hardware. Off: undo."""
+    if not on:                                 # cores and refresher first, so waking feels instant
+        for c in BIG_CORES:
+            write(f"/sys/devices/system/cpu/cpu{c}/online", "1")
+    freeze(on)
+    if on:
+        for c in BIG_CORES:
+            write(f"/sys/devices/system/cpu/cpu{c}/online", "0")
+    run("iw", "dev", "wlan0", "set", "power_save", "on" if on else "off")
+    write("/sys/class/input_booster/enable_event", "0" if on else "1")
+    run(*TMUX, "set", "-g", "status-interval", "0" if on else "15")
 
 STATE = "/run/s10-blanked"  # "1" while off, "0" just after waking (read by s10-osk)
 
@@ -41,6 +100,16 @@ def set_blank(off, cycle=True):
     with open(STATE, "w") as f:
         f.write("1" if off else "0")
 
+def log_power():
+    line = (f"{time.strftime('%Y-%m-%d %H:%M')} {read(BATTERY + '/capacity', '?')}% "
+            f"{read(BATTERY + '/status', '?')} avg {int(read(BATTERY + '/current_avg', '0')) // 1000} mA\n")
+    try:
+        lines = open(POWER_LOG).readlines()[-2000:] if os.path.exists(POWER_LOG) else []
+        with open(POWER_LOG, "w") as f:
+            f.writelines(lines + [line])
+    except OSError:
+        pass
+
 def open_inputs(fds):
     for path in glob.glob("/dev/input/event*"):
         if path not in fds:
@@ -49,12 +118,14 @@ def open_inputs(fds):
             except OSError:
                 pass
 
-fds, blanked, last = {}, False, time.monotonic()
+fds, blanked, last, next_log = {}, False, time.monotonic(), 0
 dimmed = None  # brightness to restore while dimmed
 set_blank(False, cycle=False)
+power_saving(False)
 while True:
     open_inputs(fds)  # pick up hot-plugged keyboards
-    ready, _, _ = select.select(list(fds.values()), [], [], 1)
+    # screen off: wake rarely (input still wakes select at once)
+    ready, _, _ = select.select(list(fds.values()), [], [], 60 if blanked else 1)
     activity = False
     for fd in ready:
         try:
@@ -69,6 +140,7 @@ while True:
     if activity:
         last = now
         if blanked:
+            power_saving(False)
             set_blank(False)
             blanked = False
         if dimmed is not None:  # after waking: the panel takes the level once it is on
@@ -76,8 +148,13 @@ while True:
             dimmed = None
     elif not blanked and now - last >= IDLE:
         set_blank(True)
+        power_saving(True)
         blanked = True
+        next_log = now
     elif not blanked and dimmed is None and now - last >= IDLE - DIM:
         dimmed = backlight()
         if dimmed is not None:
             backlight(max(dimmed // 5, 200))
+    if blanked and now >= next_log:
+        log_power()
+        next_log = now + 300
