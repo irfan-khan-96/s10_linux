@@ -1,0 +1,88 @@
+From dd75cba0750b2168cd231c14e5fc950f4e117083 Mon Sep 17 00:00:00 2001
+From: khan <khan@localhost>
+Date: Tue, 3 Nov 2026 14:20:40 +0100
+Subject: [PATCH 105/107] s10-terminal: freeze refresher and monitors with the
+ cgroup-v1 freezer (tmux undoes SIGSTOP; comm names are 15 chars)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ device/downstream/s10-terminal/APKBUILD       |  4 +--
+ device/downstream/s10-terminal/s10-idle-blank | 28 ++++++++++++++++---
+ 2 files changed, 26 insertions(+), 6 deletions(-)
+
+diff --git a/device/downstream/s10-terminal/APKBUILD b/device/downstream/s10-terminal/APKBUILD
+index 9f792d7dfb..37ffc45718 100644
+--- a/device/downstream/s10-terminal/APKBUILD
++++ b/device/downstream/s10-terminal/APKBUILD
+@@ -2,7 +2,7 @@
+ # setup that turns samsung-beyond1lte-downstream into a pocket terminal.
+ pkgname=s10-terminal
+ pkgver=1
+-pkgrel=16
++pkgrel=17
+ pkgdesc="Galaxy S10 pocket terminal: fbterm + tmux, on-screen keyboard, hardening"
+ url="https://postmarketos.org"
+ arch="aarch64"
+@@ -82,7 +82,7 @@ sha512sums="
+ 39bf55c1e453af330e2b67387113c32257da794aa9208ef2d8dcb5311a1c7dfc086387ad67bdb3d1076a9613abedf53450e515fbf1c6f6ed8e6da61b69fbd7b6  s10-status
+ 2ad64dddbc4290cb8b1fe600ae686891f25ed5c589263c40027fadb460eba5755fd48de5ed57cf09f02d51dc0f8d442a6915ca77386422f4c03dec2a3f45fd5f  s10-splash
+ 5fe4dd6a2064be409b02483188d9beebd4ab3de1263a62ad2453dfa7d33dcf2494f2ff81860a8443a5db44e97a454f17f0e8b55be921ed85a28e3689c3a0ae9d  s10-splash.initd
+-99f30066ae3155c923564302b200c6dfab2290e8f01d31b15833e4ac625f995a58d27e26ae7cc98060c3d0e635606e84474a6408beb4b0f795a30504de6d1b92  s10-idle-blank
++71e946e6a69d448e1f9b8982dc7f1c114730d98ba7272dd378704445d0532f8911232b2e24ab4b56485c9927b55e9e6de590e856a06b124ba70222a8f46201a3  s10-idle-blank
+ f5b670528587d518a367b66ae15fd9b5583b7ad666e03051523cf56a1b007469fc5fad535f4d22b12106042e93352b07594ec6dbc4da50766b3757d6e103f12b  s10-touch-absfix
+ 9daf9ac5a89cd6d83560f26e35b95253ea71b20eeb3556ebdf31e2b7e4a66dfa4845c0f73c43601ac63f2e56613f17777691135d564f4924f23b9a3865838e6f  s10-osk-start
+ 00e1c13c89a90739e66e37368cfc7fb9fad81b60ccedb84c2826948f77924aee8907aa227b0e845f09e2ca5331625d08769c0e63beae7bbae8360ce319808e2f  s10-term
+diff --git a/device/downstream/s10-terminal/s10-idle-blank b/device/downstream/s10-terminal/s10-idle-blank
+index f837bd66e0..d5aaef8b64 100644
+--- a/device/downstream/s10-terminal/s10-idle-blank
++++ b/device/downstream/s10-terminal/s10-idle-blank
+@@ -18,7 +18,11 @@ BACKLIGHT = "/sys/class/backlight/panel/brightness"
+ BATTERY = "/sys/class/power_supply/battery"
+ POWER_LOG = "/var/log/s10-power.log"
+ BIG_CORES = (4, 5, 6, 7)                       # mid (A75) and big (M4) clusters
+-PAUSE_WHEN_OFF = ("msm-fb-refresher", "htop", "top", "btop")
++# Frozen while the screen is off. Names as in /proc/<pid>/comm, which the kernel cuts
++# to 15 characters. They are frozen with the cgroup-v1 freezer, not SIGSTOP: tmux sends
++# SIGCONT to a pane process as soon as it sees it stopped.
++PAUSE_WHEN_OFF = ("msm-fb-refreshe", "htop", "top", "btop")
++FREEZER = "/run/s10-freezer"
+ TMUX = ["tmux", "-S", "/tmp/tmux-10000/default"]
+ 
+ def read(path, default=None):
+@@ -44,14 +48,30 @@ def backlight(value=None):
+ def run(*args):
+     subprocess.run(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+ 
++def freezer():
++    """Mount the (otherwise unused) cgroup-v1 freezer and return its 'paused' group."""
++    group = f"{FREEZER}/paused"
++    if not os.path.exists(f"{group}/freezer.state"):
++        os.makedirs(FREEZER, exist_ok=True)
++        if FREEZER not in read("/proc/mounts", ""):
++            run("mount", "-t", "cgroup", "-o", "freezer", "s10-freezer", FREEZER)
++        os.makedirs(group, exist_ok=True)
++    return group
++
++def freeze(on):
++    group = freezer()
++    if on:
++        for d in glob.glob("/proc/[0-9]*"):
++            if read(f"{d}/comm") in PAUSE_WHEN_OFF:
++                write(f"{group}/cgroup.procs", os.path.basename(d))
++    write(f"{group}/freezer.state", "FROZEN" if on else "THAWED")
++
+ def power_saving(on):
+     """Screen off: pause what only matters on screen and idle the hardware. Off: undo."""
+-    signal = "-STOP" if on else "-CONT"
+     if not on:                                 # cores and refresher first, so waking feels instant
+         for c in BIG_CORES:
+             write(f"/sys/devices/system/cpu/cpu{c}/online", "1")
+-    for name in PAUSE_WHEN_OFF:
+-        run("pkill", signal, "-x", name)
++    freeze(on)
+     if on:
+         for c in BIG_CORES:
+             write(f"/sys/devices/system/cpu/cpu{c}/online", "0")
+-- 
+2.53.0
+

@@ -1,0 +1,135 @@
+From 9c5392d56c8995486209c980ea33ca19a227f49d Mon Sep 17 00:00:00 2001
+From: Bart Ribbers <bribbers@disroot.org>
+Date: Fri, 6 Nov 2026 10:22:16 +0100
+Subject: [PATCH 056/107] temp/{aura-browser,plank-player}: remove
+
+Since they finally received a new release, 26.11.0, they have been
+upstreamed to Alpine.
+
+Part-of: <https://gitlab.nura.eco/nura/pmaports/-/merge_requests/9894>
+---
+ temp/aura-browser/APKBUILD | 52 --------------------------------------
+ temp/plank-player/APKBUILD | 52 --------------------------------------
+ 2 files changed, 104 deletions(-)
+ delete mode 100644 temp/aura-browser/APKBUILD
+ delete mode 100644 temp/plank-player/APKBUILD
+
+diff --git a/temp/aura-browser/APKBUILD b/temp/aura-browser/APKBUILD
+deleted file mode 100644
+index 4a2b265203..0000000000
+--- a/temp/aura-browser/APKBUILD
++++ /dev/null
+@@ -1,52 +0,0 @@
+-# Has no release yet, will be moved to aports with the next KDE Plasma release where it will be included
+-
+-# The group tag is just to easily find this APKBUILD by some scripts for automation
+-# group=kde-plasma
+-maintainer="team/kde <bribbers@disroot.org>"
+-pkgname=aura-browser
+-pkgver=6.6.80_git20260307
+-pkgrel=0
+-_commit="64a02ef757a09420e08b875e4351cf680d2452b4"
+-pkgdesc="Browser for a fully immersed Big Screen experience allowing you to navigate the world wide web using just your remote control"
+-url="https://invent.kde.org/plasma/aura-browser"
+-# armhf blocked by qt6-qtdeclarative
+-# armv7, x86, riscv64 and s390x blocked by qt6-qtwebengine
+-arch="all !armhf !armv7 !x86 !riscv64 !s390x"
+-license="BSD-2-Clause AND (GPL-2.0-only OR GPL-3.0-only) AND CC0-1.0"
+-makedepends="
+-	extra-cmake-modules
+-	ki18n-dev
+-	kirigami-dev
+-	openmp-dev
+-	qt6-qtbase-dev
+-	qt6-qtdeclarative-dev
+-	qt6-qtmultimedia-dev
+-	qt6-qtwebengine-dev
+-	samurai
+-	"
+-subpackages="$pkgname-lang"
+-case "$pkgver" in
+-	*.90*) _rel=unstable;;
+-	*) _rel=stable;;
+-esac
+-_repo_url="https://invent.kde.org/plasma/aura-browser.git"
+-source="https://invent.kde.org/plasma/aura-browser/-/archive/$_commit/aura-browser-$_commit.tar.gz"
+-options="!check" # No tests
+-
+-builddir="$srcdir/aura-browser-$_commit"
+-
+-build() {
+-	cmake -B build -G Ninja \
+-		-DCMAKE_BUILD_TYPE=MinSizeRel \
+-		-DCMAKE_INSTALL_PREFIX=/usr \
+-		-DCMAKE_INSTALL_LIBDIR=lib
+-	cmake --build build
+-}
+-
+-package() {
+-	DESTDIR="$pkgdir" cmake --install build
+-}
+-
+-sha512sums="
+-944ed41d171157edda30c22a0969db358cd2ce95e70e60f69686a3b5839ad4cba5f6f7c0214af3bcf6135d9607fff8aac9fc061c2217d048f178a2e143106cd2  aura-browser-64a02ef757a09420e08b875e4351cf680d2452b4.tar.gz
+-"
+diff --git a/temp/plank-player/APKBUILD b/temp/plank-player/APKBUILD
+deleted file mode 100644
+index f76273a8c4..0000000000
+--- a/temp/plank-player/APKBUILD
++++ /dev/null
+@@ -1,52 +0,0 @@
+-# Has no release yet, will be moved to aports with the next KDE Plasma release where it will be included
+-
+-# The group tag is just to easily find this APKBUILD by some scripts for automation
+-# group=kde-plasma
+-maintainer="team/kde <bribbers@disroot.org>"
+-pkgname=plank-player
+-pkgver=6.6.80_git20260304
+-pkgrel=0
+-_commit="0772b39e49ffec589eea61bd0b7e0702ed710cf8"
+-pkgdesc="Multimedia Player for playing local files on Plasma Bigscreen allowing navigation with just a remote control"
+-url="https://invent.kde.org/plasma/plank-player"
+-# armhf blocked by qt6-qtdeclarative
+-arch="all !armhf"
+-license="BSD-2-Clause AND (GPL-2.0-only OR GPL-3.0-only) AND CC0-1.0"
+-depends="kirigami"
+-# openmp can be removed once kirigami is fixed in Alpine
+-makedepends="
+-	extra-cmake-modules
+-	ki18n-dev
+-	kirigami-dev
+-	openmp-dev
+-	qt6-qtbase-dev
+-	qt6-qtdeclarative-dev
+-	qt6-qtmultimedia-dev
+-	samurai
+-	"
+-subpackages="$pkgname-lang"
+-case "$pkgver" in
+-	*.90*) _rel=unstable;;
+-	*) _rel=stable;;
+-esac
+-_repo_url="https://invent.kde.org/plasma/plank-player.git"
+-source="https://invent.kde.org/plasma/plank-player/-/archive/$_commit/plank-player-$_commit.tar.gz"
+-options="!check" # No tests
+-
+-builddir="$srcdir/plank-player-$_commit"
+-
+-build() {
+-	cmake -B build -G Ninja \
+-		-DCMAKE_BUILD_TYPE=MinSizeRel \
+-		-DCMAKE_INSTALL_PREFIX=/usr \
+-		-DCMAKE_INSTALL_LIBDIR=lib
+-	cmake --build build
+-}
+-
+-package() {
+-	DESTDIR="$pkgdir" cmake --install build
+-}
+-
+-sha512sums="
+-f423dd4bb08dc588903c46a5e9de564b20a3e74c3ca202b8dcc1878c589ffaeeccb42d44eb213a858f9a812bbf49716ba40ec9b0864095bb9d3ce784f9df56ed  plank-player-0772b39e49ffec589eea61bd0b7e0702ed710cf8.tar.gz
+-"
+-- 
+2.53.0
+

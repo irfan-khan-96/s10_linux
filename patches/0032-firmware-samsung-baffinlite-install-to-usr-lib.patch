@@ -1,0 +1,47 @@
+From 80caa2b53d21062844588d1ef3287562a397deaf Mon Sep 17 00:00:00 2001
+From: Aster Boese <asterboese@mailbox.org>
+Date: Tue, 3 Nov 2026 20:10:07 -0500
+Subject: [PATCH 032/107] firmware-samsung-baffinlite: install to /usr/lib/
+
+/lib/ has been a symlink to /usr/lib/ for quite a while now.
+Thus, this change only moves the files in packaging, but on
+devices, /usr/lib/ has been the sole path in use.
+
+Signed-off-by: Aster Boese <asterboese@mailbox.org>
+Part-of: <https://gitlab.nura.eco/nura/pmaports/-/merge_requests/9879>
+---
+ device/testing/firmware-samsung-baffinlite/APKBUILD | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/device/testing/firmware-samsung-baffinlite/APKBUILD b/device/testing/firmware-samsung-baffinlite/APKBUILD
+index 04660f1e09..824068b003 100644
+--- a/device/testing/firmware-samsung-baffinlite/APKBUILD
++++ b/device/testing/firmware-samsung-baffinlite/APKBUILD
+@@ -1,6 +1,6 @@
+ maintainer="knuxify <knuxify@gmail.com>"
+ pkgname=firmware-samsung-baffinlite
+-pkgver=2
++pkgver=3
+ pkgrel=0
+ _commit="d7195e553eed22f58835d24ecdea40e97bf639f4"
+ pkgdesc="WiFi/Bluetooth firmware for the Samsung Galaxy Grand Neo"
+@@ -14,13 +14,13 @@ builddir="$srcdir/android_vendor_samsung_baffinlite-$_commit"
+ package() {
+ 	# WiFi
+ 	install -Dm644 proprietary/etc/wifi/bcmdhd_sta.bin \
+-		"$pkgdir"/lib/firmware/postmarketos/brcm/brcmfmac4330-sdio.samsung,baffinlite.bin
++		"$pkgdir"/usr/lib/firmware/postmarketos/brcm/brcmfmac4330-sdio.samsung,baffinlite.bin
+ 	install -Dm644 proprietary/etc/wifi/nvram_net.txt \
+-		"$pkgdir"/lib/firmware/postmarketos/brcm/brcmfmac4330-sdio.samsung,baffinlite.txt
++		"$pkgdir"/usr/lib/firmware/postmarketos/brcm/brcmfmac4330-sdio.samsung,baffinlite.txt
+ 
+ 	# Bluetooth
+ 	install -Dm644 proprietary/bin/BCM4330B1_002.001.003.1025.1257.hcd \
+-		"$pkgdir"/lib/firmware/postmarketos/brcm/BCM4330B1.samsung,baffinlite.hcd
++		"$pkgdir"/usr/lib/firmware/postmarketos/brcm/BCM4330B1.samsung,baffinlite.hcd
+ }
+ 
+ sha512sums="d89032dfbae9044f4318b719abee21e6bdaba7a03c082c04531b2ec306246db3b6f35c23520e33c802ce9d4444e41b6e2cea6107a83a7a25fda1a89fbae16113  firmware-samsung-baffinlite-d7195e553eed22f58835d24ecdea40e97bf639f4.tar.gz"
+-- 
+2.53.0
+

@@ -1,0 +1,37 @@
+From 8742a0f49632486e4a05f3460a6760622d4d4c0e Mon Sep 17 00:00:00 2001
+From: Antoine Martin <dev@ayakael.net>
+Date: Wed, 4 Nov 2026 11:20:48 -0500
+Subject: [PATCH 039/107] temp/akms: install to usr/bin
+
+Ref https://gitlab.nura.eco/nura/pmaports/-/work_items/5016
+
+Part-of: <https://gitlab.nura.eco/nura/pmaports/-/merge_requests/9887>
+---
+ temp/akms/APKBUILD | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/temp/akms/APKBUILD b/temp/akms/APKBUILD
+index 798264881b..181dd06103 100644
+--- a/temp/akms/APKBUILD
++++ b/temp/akms/APKBUILD
+@@ -4,7 +4,7 @@ maintainer="Antoine Martin <dev@ayakael.net>"
+ pkgname=akms
+ _pkgver=0.3.0
+ pkgver=9999$_pkgver
+-pkgrel=1
++pkgrel=2
+ pkgdesc="Alpine Kernel Module Support"
+ url="https://github.com/jirutka/akms"
+ arch="noarch"
+@@ -27,7 +27,7 @@ build() {
+ }
+ 
+ package() {
+-	make install DESTDIR="$pkgdir" prefix=/usr
++	make install DESTDIR="$pkgdir" sbindir=/usr/bin prefix=/usr
+ 
+ 	# See https://github.com/jirutka/akms/issues/5
+ 	install -Dm644 "$srcdir"/modules-load.conf "$pkgdir"/usr/lib/modules-load.d/$pkgname.conf
+-- 
+2.53.0
+

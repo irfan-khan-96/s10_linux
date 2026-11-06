@@ -1,0 +1,81 @@
+From 1e77d612b0c63dcaa16154c412881ed411209b45 Mon Sep 17 00:00:00 2001
+From: Aster Boese <asterboese@mailbox.org>
+Date: Sun, 11 Oct 2026 13:29:11 -0400
+Subject: [PATCH 029/107] main/postmarketos-base-ui: remove unneeded comments
+ from elogind's logind.conf
+
+Signed-off-by: Aster Boese <asterboese@mailbox.org>
+Part-of: <https://gitlab.nura.eco/nura/pmaports/-/merge_requests/9730>
+---
+ main/postmarketos-base-ui/APKBUILD            |  4 +--
+ .../rootfs-usr-lib-elogind-logind.conf        | 32 -------------------
+ 2 files changed, 2 insertions(+), 34 deletions(-)
+
+diff --git a/main/postmarketos-base-ui/APKBUILD b/main/postmarketos-base-ui/APKBUILD
+index 9caf58716b..630451087e 100644
+--- a/main/postmarketos-base-ui/APKBUILD
++++ b/main/postmarketos-base-ui/APKBUILD
+@@ -1,6 +1,6 @@
+ maintainer="Clayton Craft <clayton@craftyguy.net>"
+ pkgname=postmarketos-base-ui
+-pkgver=62
++pkgver=63
+ pkgrel=0
+ pkgdesc="Meta package for minimal postmarketOS UI base"
+ url="https://postmarketos.org"
+@@ -361,7 +361,7 @@ e60bfff4ae4b246e9b31cfe1aab55b670b7bb49f670830846d623a6d7f21c6d5c8b90a62a8612b62
+ 6c516635a61fbaa93102f02301a75070a91de837456b07a50e24a9e0ee5dac785087d4a8f78906807719ebf6f0124127383441cccf00475d9a91d3dbaf9d4d81  rootfs-etc-pulse-default.pa.d-postmarketos.pa
+ 041e50a7f78f7f03153175027439fc203f3dc81ed9970c579a16728d36e006e77f49b0321ee4bb7bb127fa6e4c31de3e7029f80ea75c4afc83bae7d24906372d  rootfs-etc-sleep-inhibitor.conf
+ cac604e25c46e695dd30bd5a10cfd2d69595fcc3bc290096ac94b76b10834d591ea6576afb79c46b5da492a1dbf8660cf87b6110cd39937e15237bc74fa7a5c6  rootfs-etc-X11-Xwrapper.config
+-8d2c54fe3ca62c62f8337fb6be28479d0e02ea63f32abae81907f2768631e65c9e17485f8bc0854a013377f729b06dd1873e2b75f86f657ece866d00aecbbdb4  rootfs-usr-lib-elogind-logind.conf
++ffa32b4c5c510e4a0f1a83ec89adf237e433d3245d3b41ca36d4c30ed3488d3d0361bc652241eea71082144213dad0cf791100199ecd77a2bb08fcc0513aa924  rootfs-usr-lib-elogind-logind.conf
+ 53a61899e0e2188e6fc6ee33c151e73078b7f6cb37d98fc820e17c75b4d2d9c0fdd6d782da896f656811f3a7c45c17216cf3fffb406bbdf639903389903f96d9  rootfs-usr-lib-NetworkManager-conf.d-50-connectivity.conf
+ 3c9ae7415f4891bee8595166ed6a42cb577a837f741c6b5409d193558626348b41516888a01d0c4895282c5f4e9a1ff838c19712888750b2ef68429bb4b42ee3  rootfs-usr-lib-NetworkManager-conf.d-50-hostname-mode.conf
+ 439615745d5be0d1ab6801cfbf960a31b12da30bf5df64ba2914ff32dae9e650595d7f96e66f5dff6308f092de1f746277ea7f4e701888a22571f7c119b7bf0d  rootfs-usr-lib-NetworkManager-conf.d-50-iwd.conf
+diff --git a/main/postmarketos-base-ui/rootfs-usr-lib-elogind-logind.conf b/main/postmarketos-base-ui/rootfs-usr-lib-elogind-logind.conf
+index 624a0089bc..fae6693569 100644
+--- a/main/postmarketos-base-ui/rootfs-usr-lib-elogind-logind.conf
++++ b/main/postmarketos-base-ui/rootfs-usr-lib-elogind-logind.conf
+@@ -1,39 +1,7 @@
+ # This file is provided by postmarketos-base. See logind.conf(5) for details.
+ 
+ [Login]
+-#KillUserProcesses=no
+-#KillOnlyUsers=
+-#KillExcludeUsers=root
+-#InhibitDelayMaxSec=5
+ HandlePowerKey=ignore
+-#HandleSuspendKey=suspend
+-#HandleHibernateKey=hibernate
+-#HandleLidSwitch=suspend
+-#HandleLidSwitchExternalPower=suspend
+-#HandleLidSwitchDocked=ignore
+-#PowerKeyIgnoreInhibited=no
+-#SuspendKeyIgnoreInhibited=no
+-#HibernateKeyIgnoreInhibited=no
+-#LidSwitchIgnoreInhibited=yes
+-#HoldoffTimeoutSec=30s
+-#IdleAction=ignore
+-#IdleActionSec=30min
+-#RuntimeDirectorySize=10%
+-#RemoveIPC=yes
+-#InhibitorsMax=8192
+-#SessionsMax=8192
+ 
+ [Sleep]
+-#AllowSuspend=yes
+-#AllowHibernation=yes
+-#AllowSuspendThenHibernate=yes
+-#AllowHybridSleep=yes
+-#AllowPowerOffInterrupts=no
+ AllowSuspendInterrupts=yes
+-#SuspendState=mem standby freeze
+-#SuspendMode=
+-#HibernateState=disk
+-#HibernateMode=platform shutdown
+-#HybridSleepState=disk
+-#HybridSleepMode=suspend platform shutdown
+-#HibernateDelaySec=10800
+-- 
+2.53.0
+

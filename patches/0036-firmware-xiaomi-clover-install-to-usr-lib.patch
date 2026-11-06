@@ -1,0 +1,41 @@
+From 04b406bf7102eab8be8d1208f4d10e4eadb04b24 Mon Sep 17 00:00:00 2001
+From: Aster Boese <asterboese@mailbox.org>
+Date: Sat, 31 Oct 2026 15:35:49 -0400
+Subject: [PATCH 036/107] firmware-xiaomi-clover: install to /usr/lib/
+
+/lib/ has been a symlink to /usr/lib/ for quite a while now.
+Thus, this change only moves the files in packaging, but on
+devices, /usr/lib/ has been the sole path in use.
+
+Signed-off-by: Aster Boese <asterboese@mailbox.org>
+Part-of: <https://gitlab.nura.eco/nura/pmaports/-/merge_requests/9858>
+---
+ device/testing/firmware-xiaomi-clover/APKBUILD | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/device/testing/firmware-xiaomi-clover/APKBUILD b/device/testing/firmware-xiaomi-clover/APKBUILD
+index 4d8d1159d0..5b85f32002 100644
+--- a/device/testing/firmware-xiaomi-clover/APKBUILD
++++ b/device/testing/firmware-xiaomi-clover/APKBUILD
+@@ -1,7 +1,7 @@
+ maintainer="Nickolay Goppen <setotau@mainlining.org>"
+ pkgname=firmware-xiaomi-clover
+-pkgver=2
+-pkgrel=1
++pkgver=3
++pkgrel=0
+ pkgdesc="Firmware files for Xiaomi Mi Pad 4 / 4 Plus"
+ url="https://github.com/setotau/$pkgname"
+ arch="aarch64"
+@@ -17,7 +17,7 @@ source="
+ "
+ 
+ builddir="src"
+-_fwdir="/lib/firmware"
++_fwdir="/usr/lib/firmware"
+ 
+ package() {
+ 	ath10k-fwencoder --create \
+-- 
+2.53.0
+

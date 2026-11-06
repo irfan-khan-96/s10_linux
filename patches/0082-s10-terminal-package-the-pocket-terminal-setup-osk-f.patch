@@ -1,0 +1,661 @@
+From 092ac4b4fa8e9e199e06348ae0f1aeec1ab6f883 Mon Sep 17 00:00:00 2001
+From: khan <khan@localhost>
+Date: Sun, 1 Nov 2026 20:01:49 +0100
+Subject: [PATCH 082/107] s10-terminal: package the pocket-terminal setup (osk,
+ fbterm session, hardening)
+
+---
+ .../downstream/s10-terminal/10-firewall.start |  21 ++
+ .../s10-terminal/20-display-on.start          |   3 +
+ .../downstream/s10-terminal/30-usb-dhcp.start |   4 +
+ .../s10-terminal/40-s10-tuning.start          |  11 +
+ .../s10-terminal/50-s10-idle-blank.start      |   2 +
+ .../downstream/s10-terminal/60-s10-osk.start  |   3 +
+ .../s10-terminal/90-s10-touch-absfix.rules    |   1 +
+ device/downstream/s10-terminal/APKBUILD       |  85 ++++++++
+ device/downstream/s10-terminal/fbtermrc       |  15 ++
+ device/downstream/s10-terminal/s10-idle-blank |  48 +++++
+ device/downstream/s10-terminal/s10-osk        | 202 ++++++++++++++++++
+ device/downstream/s10-terminal/s10-osk-start  |   8 +
+ device/downstream/s10-terminal/s10-term       |   6 +
+ .../s10-terminal/s10-terminal.post-install    |  13 ++
+ .../s10-terminal/s10-terminal.post-upgrade    |  13 ++
+ .../downstream/s10-terminal/s10-touch-absfix  |  27 +++
+ .../s10-terminal/sshd-hardening.conf          |   4 +
+ device/downstream/s10-terminal/tmux.conf      |  20 ++
+ .../s10-terminal/unudhcpd.rndis0.confd        |   1 +
+ .../s10-terminal/wifi-powersave-off.conf      |   2 +
+ 20 files changed, 489 insertions(+)
+ create mode 100755 device/downstream/s10-terminal/10-firewall.start
+ create mode 100755 device/downstream/s10-terminal/20-display-on.start
+ create mode 100755 device/downstream/s10-terminal/30-usb-dhcp.start
+ create mode 100755 device/downstream/s10-terminal/40-s10-tuning.start
+ create mode 100644 device/downstream/s10-terminal/50-s10-idle-blank.start
+ create mode 100644 device/downstream/s10-terminal/60-s10-osk.start
+ create mode 100644 device/downstream/s10-terminal/90-s10-touch-absfix.rules
+ create mode 100644 device/downstream/s10-terminal/APKBUILD
+ create mode 100755 device/downstream/s10-terminal/fbtermrc
+ create mode 100755 device/downstream/s10-terminal/s10-idle-blank
+ create mode 100755 device/downstream/s10-terminal/s10-osk
+ create mode 100644 device/downstream/s10-terminal/s10-osk-start
+ create mode 100644 device/downstream/s10-terminal/s10-term
+ create mode 100644 device/downstream/s10-terminal/s10-terminal.post-install
+ create mode 100644 device/downstream/s10-terminal/s10-terminal.post-upgrade
+ create mode 100755 device/downstream/s10-terminal/s10-touch-absfix
+ create mode 100644 device/downstream/s10-terminal/sshd-hardening.conf
+ create mode 100755 device/downstream/s10-terminal/tmux.conf
+ create mode 100755 device/downstream/s10-terminal/unudhcpd.rndis0.confd
+ create mode 100755 device/downstream/s10-terminal/wifi-powersave-off.conf
+
+diff --git a/device/downstream/s10-terminal/10-firewall.start b/device/downstream/s10-terminal/10-firewall.start
+new file mode 100755
+index 0000000000..eb754bb8ab
+--- /dev/null
++++ b/device/downstream/s10-terminal/10-firewall.start
+@@ -0,0 +1,21 @@
++#!/bin/sh
++# Allow SSH from the home LAN and the USB link only; drop all other inbound.
++LAN=192.168.178.0/24   # home network allowed to reach SSH and the share
++IPT=/usr/sbin/iptables-legacy
++IP6T=/usr/sbin/ip6tables-legacy
++for t in $IPT $IP6T; do
++	$t -F INPUT; $t -F FORWARD
++	$t -P INPUT DROP; $t -P FORWARD DROP; $t -P OUTPUT ACCEPT
++	$t -A INPUT -i lo -j ACCEPT
++	$t -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
++	$t -A INPUT -m conntrack --ctstate INVALID -j DROP
++	$t -A INPUT -i rndis0 -p tcp --dport 22 -j ACCEPT
++done
++$IPT -A INPUT -p icmp -j ACCEPT
++$IPT -A INPUT -i wlan0 -s $LAN -p tcp --dport 22 -j ACCEPT
++$IPT -A INPUT -i wlan0 -s $LAN -p tcp --dport 445 -j ACCEPT
++$IPT -A INPUT -i wlan0 -p udp --sport 67 --dport 68 -j ACCEPT
++$IPT -A INPUT -i rndis0 -p udp --dport 67 -j ACCEPT
++$IP6T -A INPUT -p ipv6-icmp -j ACCEPT
++$IP6T -A INPUT -s fe80::/10 -p udp --dport 546 -j ACCEPT
++$IP6T -A INPUT -i wlan0 -s fe80::/10 -p tcp --dport 22 -j ACCEPT
+diff --git a/device/downstream/s10-terminal/20-display-on.start b/device/downstream/s10-terminal/20-display-on.start
+new file mode 100755
+index 0000000000..c1b4231cfc
+--- /dev/null
++++ b/device/downstream/s10-terminal/20-display-on.start
+@@ -0,0 +1,3 @@
++#!/bin/sh
++# Samsung's DECON starts powered off on Linux; unblank it once at boot.
++echo 0 > /sys/class/graphics/fb0/blank
+diff --git a/device/downstream/s10-terminal/30-usb-dhcp.start b/device/downstream/s10-terminal/30-usb-dhcp.start
+new file mode 100755
+index 0000000000..d97e8bbd39
+--- /dev/null
++++ b/device/downstream/s10-terminal/30-usb-dhcp.start
+@@ -0,0 +1,4 @@
++#!/bin/sh
++# rndis0 normally keeps 172.16.42.1 from the initramfs; make sure it has it.
++ip addr show rndis0 2>/dev/null | grep -q 172.16.42.1 || ip addr add 172.16.42.1/16 dev rndis0
++ip link set rndis0 up
+diff --git a/device/downstream/s10-terminal/40-s10-tuning.start b/device/downstream/s10-terminal/40-s10-tuning.start
+new file mode 100755
+index 0000000000..1dffea03a3
+--- /dev/null
++++ b/device/downstream/s10-terminal/40-s10-tuning.start
+@@ -0,0 +1,11 @@
++#!/bin/sh
++# Samsung input booster: raise CPU clocks for ~1 s on touch, as Android does.
++# Android's init enables it; on Linux it starts disabled.
++echo 1 > /sys/class/input_booster/enable_event
++# schedutil: ramp clocks up within 0.5 ms of load (was 4 ms), drop them after
++# 20 ms (was 4 ms), so short bursts like redraws do not run at low clocks.
++for p in /sys/devices/system/cpu/cpufreq/policy*; do
++	echo schedutil > $p/scaling_governor
++	echo 500 > $p/schedutil/up_rate_limit_us
++	echo 20000 > $p/schedutil/down_rate_limit_us
++done
+diff --git a/device/downstream/s10-terminal/50-s10-idle-blank.start b/device/downstream/s10-terminal/50-s10-idle-blank.start
+new file mode 100644
+index 0000000000..33bca96a7f
+--- /dev/null
++++ b/device/downstream/s10-terminal/50-s10-idle-blank.start
+@@ -0,0 +1,2 @@
++#!/bin/sh
++pidof -x s10-idle-blank >/dev/null || setsid /usr/bin/s10-idle-blank >/dev/null 2>&1 < /dev/null &
+diff --git a/device/downstream/s10-terminal/60-s10-osk.start b/device/downstream/s10-terminal/60-s10-osk.start
+new file mode 100644
+index 0000000000..13ae615e08
+--- /dev/null
++++ b/device/downstream/s10-terminal/60-s10-osk.start
+@@ -0,0 +1,3 @@
++#!/bin/sh
++# on-screen keyboard in the strip fbterm leaves free (FBTERM_RESERVE_BOTTOM)
++setsid /usr/bin/s10-osk > /tmp/osk.log 2>&1 < /dev/null &
+diff --git a/device/downstream/s10-terminal/90-s10-touch-absfix.rules b/device/downstream/s10-terminal/90-s10-touch-absfix.rules
+new file mode 100644
+index 0000000000..3f7a0fe5cc
+--- /dev/null
++++ b/device/downstream/s10-terminal/90-s10-touch-absfix.rules
+@@ -0,0 +1 @@
++ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="sec_touchscreen", SYMLINK+="input/s10-touchscreen", RUN+="/usr/bin/s10-touch-absfix $devnode"
+diff --git a/device/downstream/s10-terminal/APKBUILD b/device/downstream/s10-terminal/APKBUILD
+new file mode 100644
+index 0000000000..fa636f89ba
+--- /dev/null
++++ b/device/downstream/s10-terminal/APKBUILD
+@@ -0,0 +1,85 @@
++# Local package for the S10 fork: terminal, on-screen keyboard and home-server
++# setup that turns samsung-beyond1lte-downstream into a pocket terminal.
++pkgname=s10-terminal
++pkgver=1
++pkgrel=0
++pkgdesc="Galaxy S10 pocket terminal: fbterm + tmux, on-screen keyboard, hardening"
++url="https://postmarketos.org"
++arch="aarch64"
++license="MIT"
++depends="
++	fbterm
++	font-jetbrains-mono
++	iptables
++	iptables-legacy
++	msm-fb-refresher
++	ncurses-terminfo
++	neovim
++	py3-numpy
++	py3-pillow
++	python3
++	tmux
++	unudhcpd
++	wordgrinder
++	"
++install="$pkgname.post-install $pkgname.post-upgrade"
++options="!check"
++source="
++	s10-osk
++	s10-idle-blank
++	s10-touch-absfix
++	s10-osk-start
++	s10-term
++	fbtermrc
++	tmux.conf
++	10-firewall.start
++	20-display-on.start
++	30-usb-dhcp.start
++	40-s10-tuning.start
++	50-s10-idle-blank.start
++	60-s10-osk.start
++	90-s10-touch-absfix.rules
++	unudhcpd.rndis0.confd
++	wifi-powersave-off.conf
++	sshd-hardening.conf
++	"
++
++package() {
++	for f in s10-osk s10-idle-blank s10-touch-absfix s10-osk-start s10-term; do
++		install -Dm755 "$srcdir/$f" "$pkgdir/usr/bin/$f"
++	done
++	install -Dm644 "$srcdir"/fbtermrc "$pkgdir"/usr/share/s10-terminal/fbtermrc
++	install -Dm644 "$srcdir"/tmux.conf "$pkgdir"/etc/tmux.conf
++	for f in 10-firewall 20-display-on 30-usb-dhcp 40-s10-tuning 50-s10-idle-blank 60-s10-osk; do
++		install -Dm755 "$srcdir/$f.start" "$pkgdir/etc/local.d/$f.start"
++	done
++	install -Dm644 "$srcdir"/90-s10-touch-absfix.rules \
++		"$pkgdir"/usr/lib/udev/rules.d/90-s10-touch-absfix.rules
++	install -Dm644 "$srcdir"/unudhcpd.rndis0.confd "$pkgdir"/etc/conf.d/unudhcpd.rndis0
++	mkdir -p "$pkgdir"/etc/init.d
++	ln -s unudhcpd "$pkgdir"/etc/init.d/unudhcpd.rndis0
++	install -Dm644 "$srcdir"/wifi-powersave-off.conf \
++		"$pkgdir"/etc/NetworkManager/conf.d/10-s10-wifi-powersave-off.conf
++	install -Dm644 "$srcdir"/sshd-hardening.conf \
++		"$pkgdir"/etc/ssh/sshd_config.d/10-hardening.conf
++}
++
++sha512sums="
++e06e00b2710f4aae954451364d32a71f42aee06d3af0a0a7d4bce700a8caa1440b64789748c6db912e61e0b891c9de78d662a2ee0579b817104b173d1cb873a7  s10-osk
++d3f73cfc060ad3222521699ba980d4ade218bf2ee8b9681bd6abebd8300602bca3283eb0cabce74792355741d8812f2f1753e16b540b229812a4c404a95cec0a  s10-idle-blank
++f5b670528587d518a367b66ae15fd9b5583b7ad666e03051523cf56a1b007469fc5fad535f4d22b12106042e93352b07594ec6dbc4da50766b3757d6e103f12b  s10-touch-absfix
++9daf9ac5a89cd6d83560f26e35b95253ea71b20eeb3556ebdf31e2b7e4a66dfa4845c0f73c43601ac63f2e56613f17777691135d564f4924f23b9a3865838e6f  s10-osk-start
++b2bd9a34bdba914b352061ca3643e35e1ebe298eba031849323a84ba2a1ea5d6e91ac646f966cc17e47bbfc694eac15002b0770ee9a3e8416bfbf9da6ed31cb5  s10-term
++57a90c056354401584f280ba2e94483dd08dc89fbbd643626f04a1d121ddd0c6a180efb477d863ecd4b2da95325ca8576d355c4467a774c39a08f594978e2675  fbtermrc
++53bc339ea8e0fbee4d1c4c2f430b329260939f47118eafc4f8ad415d17ca1f523b053b38057e7ee6a880b3dd8f720d38da0b45730f2fd2f177a49279b4fafce3  tmux.conf
++2925ca72c125e154331429da14c4b2d515c0cb0b023cae521326f457d098a35ff58c78b5a32e2d950eacd2cb97e086c914e20067577232243c05baf72504df78  10-firewall.start
++0f7f7f1b2d71ca3c5b4082b82ce36f021c96ba8c14db74a4c552b8a931133dabdfdd69628a4d1830e84f2b0b1da40a8624ea100f548f782932fad2ad49846de3  20-display-on.start
++13ff9308e064e707cdf329b867d29ba7668e5662c36cc58212b1e13dbb4314c1e2d64b5ec2c9b6a0088f38c8d677162a7ecc1a4d7a488ff6ee86c3c8bf9680de  30-usb-dhcp.start
++6bd9d0b40ebf0fc1528e56e445d11e06c8d42c70b44f1fe4c8eccc4832570519a0f0d41c0b1ee433d6a6c95ce220b66fa4e4921df36837c3d083b62285f2e6ff  40-s10-tuning.start
++f3efe2a495d1d1244094cda02a17814ff57ab5c2f49942cfbfaa4ddc385c686d9a8048c92a1b42d1e3d517f0d75396fe5d1d9d01dc966976492ad437d6e928ea  50-s10-idle-blank.start
++38b4b7aaadec367ed30dc9daa7d8d958972b6fb807817f22487029123e3527e62c28fa3be49d739985a101db9033bd29727be118a09eb5086d755fcb3f2dd289  60-s10-osk.start
++a484b168fdd2edfa58d0cfeab44448ec0d019ef4c27f4a24057be8bf7842c0a3447c847dc2e45353ad4f11bdd133495b4942f6367bb6ab49a807451ca7c283eb  90-s10-touch-absfix.rules
++1380cb0f25b065a8c908dcaf462c08832c4100992ec2c548d70b43aacbd5dcd0093fd96cc8671bfd6710c2bee7b543ab10b8e9ff90a201b370adea3f638f8c7a  unudhcpd.rndis0.confd
++8692b03ef5951179e8e2d622285925d8db9ec1999fe71c5611a37ba67f7c44b209c44ae4f467dfb3bb96f4b3257a243dc3060bf73e218d372fd06ca31e9e8de0  wifi-powersave-off.conf
++8390ae37016c3ba3cedf73b63c343c2eaf1329ba56b196f24cb58e5e0dfcff6850c60005792e36948fc14361748ea91a00341cf28c90f9e172e0c91e9afd0622  sshd-hardening.conf
++"
+diff --git a/device/downstream/s10-terminal/fbtermrc b/device/downstream/s10-terminal/fbtermrc
+new file mode 100755
+index 0000000000..3cff096641
+--- /dev/null
++++ b/device/downstream/s10-terminal/fbtermrc
+@@ -0,0 +1,15 @@
++# fbterm on the Galaxy S10 (1440x3040, ~550 dpi)
++font-names=JetBrains Mono
++font-size=36
++font-width=
++font-height=
++# 0 = black (true black on AMOLED), 7 = light grey text
++color-foreground=7
++color-background=0
++history-lines=2000
++text-encodings=
++cursor-shape=1
++cursor-interval=0
++word-chars=._-
++screen-rotate=0
++input-method=
+diff --git a/device/downstream/s10-terminal/s10-idle-blank b/device/downstream/s10-terminal/s10-idle-blank
+new file mode 100755
+index 0000000000..f1e3897935
+--- /dev/null
++++ b/device/downstream/s10-terminal/s10-idle-blank
+@@ -0,0 +1,48 @@
++#!/usr/bin/python3
++# Turn the S10 panel off after IDLE seconds without input, and back on at the
++# first key press, touch or button (USB keyboards may be plugged in at any time).
++import glob, os, select, time
++
++IDLE = int(os.environ.get("S10_IDLE_SECONDS", "120"))
++BLANK = "/sys/class/graphics/fb0/blank"
++
++STATE = "/run/s10-blanked"  # "1" while off, "0" just after waking (read by s10-osk)
++
++def set_blank(off):
++    with open(BLANK, "w") as f:
++        f.write("1" if off else "0")
++    with open(STATE, "w") as f:
++        f.write("1" if off else "0")
++
++def open_inputs(fds):
++    for path in glob.glob("/dev/input/event*"):
++        if path not in fds:
++            try:
++                fds[path] = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
++            except OSError:
++                pass
++
++fds, blanked, last = {}, False, time.monotonic()
++set_blank(False)
++while True:
++    open_inputs(fds)  # pick up hot-plugged keyboards
++    ready, _, _ = select.select(list(fds.values()), [], [], 5)
++    activity = False
++    for fd in ready:
++        try:
++            if os.read(fd, 4096):
++                activity = True
++        except OSError:  # device unplugged
++            for path, f in list(fds.items()):
++                if f == fd:
++                    os.close(f)
++                    del fds[path]
++    now = time.monotonic()
++    if activity:
++        last = now
++        if blanked:
++            set_blank(False)
++            blanked = False
++    elif not blanked and now - last >= IDLE:
++        set_blank(True)
++        blanked = True
+diff --git a/device/downstream/s10-terminal/s10-osk b/device/downstream/s10-terminal/s10-osk
+new file mode 100755
+index 0000000000..2cf3506d25
+--- /dev/null
++++ b/device/downstream/s10-terminal/s10-osk
+@@ -0,0 +1,202 @@
++#!/usr/bin/python3
++# On-screen keyboard for the S10 terminal (fbterm). Draws into the bottom strip
++# of /dev/fb0 that fbterm leaves free (FBTERM_RESERVE_BOTTOM), reads the
++# touchscreen directly and types through a uinput virtual keyboard.
++# Drawing goes through mmap: Samsung's decon driver ignores write() on fb0.
++import fcntl, mmap, os, select, struct, time
++import numpy as np
++from PIL import Image, ImageDraw, ImageFont
++
++W, H_SCREEN = 1440, 3040
++KB_H = int(os.environ.get("S10_OSK_HEIGHT", "1100"))
++TOP = H_SCREEN - KB_H
++LL = W * 2                                  # RGB565, 2 bytes per pixel
++TOUCH = "/dev/input/s10-touchscreen"
++FONT = "/usr/share/fonts/jetbrains-mono/JetBrainsMono-Regular.ttf"
++VIBRATOR = "/sys/class/timed_output/vibrator/enable"
++BLANKED = "/run/s10-blanked"                # written by s10-idle-blank
++
++# Linux key codes (input-event-codes.h)
++K = dict(ESC=1, BKSP=14, TAB=15, ENTER=28, CTRL=29, SHIFT=42, ALT=56, SPACE=57,
++         UP=103, LEFT=105, RIGHT=106, DOWN=108, PGUP=104, PGDN=109)
++LETTERS = dict(zip("qwertyuiop", range(16, 26)), **dict(zip("asdfghjkl", range(30, 39))),
++               **dict(zip("zxcvbnm", range(44, 51))))
++DIGITS = dict(zip("1234567890", range(2, 12)))
++SYMBOLS = {"-": (12, 0), "_": (12, 1), "=": (13, 0), "+": (13, 1), "[": (26, 0), "{": (26, 1),
++           "]": (27, 0), "}": (27, 1), ";": (39, 0), ":": (39, 1), "'": (40, 0), '"': (40, 1),
++           "`": (41, 0), "~": (41, 1), "\\": (43, 0), "|": (43, 1), ",": (51, 0), "<": (51, 1),
++           ".": (52, 0), ">": (52, 1), "/": (53, 0), "?": (53, 1), " ": (57, 0)}
++SYMBOLS.update({s: (DIGITS[d], 1) for s, d in zip("!@#$%^&*()", "1234567890")})
++
++def char_key(c):
++    if c in LETTERS: return LETTERS[c], False
++    if c.lower() in LETTERS: return LETTERS[c.lower()], True
++    if c in DIGITS: return DIGITS[c], False
++    code, shift = SYMBOLS[c]; return code, bool(shift)
++
++# Layouts: list of rows; each key is (label, action, width). action: "c:<char>"
++# types a character, "k:<NAME>" a key, "m:<NAME>" toggles a modifier, "l:<layer>".
++def row(chars): return [(c, "c:" + c, 1) for c in chars]
++FN = [("Esc", "k:ESC", 1), ("Tab", "k:TAB", 1), ("Ctrl", "m:CTRL", 1.2), ("Alt", "m:ALT", 1),
++      ("←", "k:LEFT", 1), ("↓", "k:DOWN", 1), ("↑", "k:UP", 1), ("→", "k:RIGHT", 1)]
++LAYERS = {
++    "abc": [FN, row("1234567890"), row("qwertyuiop"), row("asdfghjkl"),
++            [("⇧", "m:SHIFT", 1.5)] + row("zxcvbnm") + [("⌫", "k:BKSP", 1.5)],
++            [("?123", "l:sym", 1.5), ("-", "c:-", 1), ("/", "c:/", 1), ("", "c: ", 4.5),
++             (".", "c:.", 1), ("⏎", "k:ENTER", 1.8)]],
++    "sym": [FN, row("!@#$%^&*()"), row("-_=+[]{};"), row(":'\"`~|\\<>"),
++            [("⇧", "m:SHIFT", 1.5)] + row(",.?/$&*") + [("⌫", "k:BKSP", 1.5)],
++            [("abc", "l:abc", 1.5), ("PgUp", "k:PGUP", 1.3), ("PgDn", "k:PGDN", 1.3), ("", "c: ", 3.4),
++             ("|", "c:|", 1), ("⏎", "k:ENTER", 1.8)]],
++}
++REPEATABLE = {"k:BKSP", "k:LEFT", "k:RIGHT", "k:UP", "k:DOWN", "c: "}
++
++BG, KEY, SPECIAL, TEXT, DOWN, ACTIVE = (0, 0, 0), (38, 38, 42), (58, 58, 64), (230, 230, 230), (70, 130, 220), (52, 100, 170)
++PAD = 10
++
++class Keyboard:
++    def __init__(self):
++        fd = os.open("/dev/fb0", os.O_RDWR)
++        self.fb = mmap.mmap(fd, LL * H_SCREEN, mmap.MAP_SHARED, mmap.PROT_READ | mmap.PROT_WRITE)
++        self.font = ImageFont.truetype(FONT, 58)
++        self.small = ImageFont.truetype(FONT, 42)
++        self.layer, self.mods, self.pressed = "abc", set(), None
++        self.uinput = self.make_uinput()
++        self.layout()
++        self.draw()
++
++    # ---- output: uinput virtual keyboard ----
++    def make_uinput(self):
++        fd = os.open("/dev/uinput", os.O_WRONLY | os.O_NONBLOCK)
++        fcntl.ioctl(fd, 0x40045564, 1)                       # UI_SET_EVBIT EV_KEY
++        for code in range(1, 120):
++            fcntl.ioctl(fd, 0x40045565, code)                # UI_SET_KEYBIT
++        dev = struct.pack("80sHHHHi", b"s10-osk", 0x06, 0x1234, 0x5678, 1, 0) + b"\0" * (4 * 64 * 4)
++        os.write(fd, dev)
++        fcntl.ioctl(fd, 0x5501)                              # UI_DEV_CREATE
++        time.sleep(0.3)
++        return fd
++
++    def emit(self, code, value):
++        os.write(self.uinput, struct.pack("qqHHi", 0, 0, 1, code, value))
++        os.write(self.uinput, struct.pack("qqHHi", 0, 0, 0, 0, 0))   # SYN_REPORT
++
++    def tap(self, code, shift=False):
++        held = [K[m] for m in ("CTRL", "ALT") if m in self.mods]
++        if shift or "SHIFT" in self.mods: held.append(K["SHIFT"])
++        for m in held: self.emit(m, 1)
++        self.emit(code, 1); self.emit(code, 0)
++        for m in reversed(held): self.emit(m, 0)
++
++    # ---- layout and drawing ----
++    def layout(self):
++        rows = LAYERS[self.layer]
++        rh = (KB_H - PAD) / len(rows)
++        self.keys = []
++        for r, keys in enumerate(rows):
++            units = sum(k[2] for k in keys)
++            uw = (W - PAD) / max(units, 10)
++            x = (W - units * uw) / 2 + PAD / 2
++            for label, action, width in keys:
++                box = (int(x + PAD / 2), int(r * rh + PAD), int(x + width * uw - PAD / 2), int((r + 1) * rh))
++                self.keys.append((box, label, action))
++                x += width * uw
++
++    def key_colour(self, action):
++        if self.pressed == action: return DOWN
++        if action.startswith("m:") and action[2:] in self.mods: return ACTIVE
++        return KEY if action.startswith("c:") and len(action) == 3 and action[2] != " " else SPECIAL
++
++    def label(self, label):
++        if "SHIFT" in self.mods and len(label) == 1 and label.isalpha(): return label.upper()
++        return label
++
++    def render(self, only=None):
++        img = Image.new("RGB", (W, KB_H), BG)
++        d = ImageDraw.Draw(img)
++        for box, label, action in self.keys:
++            d.rounded_rectangle(box, radius=18, fill=self.key_colour(action))
++            text = self.label(label)
++            font = self.font if len(text) <= 2 else self.small
++            cx, cy = (box[0] + box[2]) / 2, (box[1] + box[3]) / 2
++            d.text((cx, cy), text, font=font, fill=TEXT, anchor="mm")
++        return img
++
++    def draw(self):
++        rgb = np.asarray(self.render(), dtype=np.uint16)
++        rgb565 = ((rgb[..., 0] >> 3) << 11) | ((rgb[..., 1] >> 2) << 5) | (rgb[..., 2] >> 3)
++        self.fb[TOP * LL:(TOP + KB_H) * LL] = rgb565.astype("<u2").tobytes()
++
++    # ---- input ----
++    def key_at(self, x, y):
++        for box, label, action in self.keys:
++            if box[0] - PAD <= x <= box[2] + PAD and box[1] - PAD <= y <= box[3] + PAD:
++                return action
++        return None
++
++    def press(self, action):
++        kind, arg = action[0], action[2:]
++        if kind == "m":
++            self.mods ^= {arg}
++        elif kind == "l":
++            self.layer = arg; self.layout()
++        else:
++            if kind == "c":
++                code, shift = char_key(arg); self.tap(code, shift)
++            else:
++                self.tap(K[arg])
++            self.mods -= {"SHIFT", "CTRL", "ALT"}       # one-shot modifiers
++        try:
++            with open(VIBRATOR, "w") as f: f.write("12")
++        except OSError:
++            pass
++
++def screen_waking(now):
++    """True while the screen is off or was woken less than 0.7 s ago."""
++    try:
++        with open(BLANKED) as f:
++            if f.read().strip() == "1":
++                return True
++        return time.time() - os.path.getmtime(BLANKED) < 0.7
++    except OSError:
++        return False
++
++def main():
++    kb = Keyboard()
++    tfd = os.open(TOUCH, os.O_RDONLY)
++    x = y = None
++    down, down_since, last_repeat, slot = False, 0, 0, 0
++    tracking = {}
++    while True:
++        timeout = 0.03 if kb.pressed in REPEATABLE else None
++        r, _, _ = select.select([tfd], [], [], timeout)
++        now = time.monotonic()
++        if not r:
++            # key repeat for held Backspace / arrows / space
++            if kb.pressed and now - down_since > 0.45 and now - last_repeat > 0.06:
++                kb.press(kb.pressed); last_repeat = now
++            continue
++        data = os.read(tfd, 24 * 64)
++        for i in range(0, len(data), 24):
++            _, _, etype, code, value = struct.unpack("qqHHi", data[i:i + 24])
++            if etype == 3:                                  # EV_ABS
++                if code == 0x2f: slot = value
++                elif slot != 0: continue                    # single finger typing
++                elif code == 0x39:
++                    if value >= 0: tracking[0] = True; down = True
++                    else: tracking.pop(0, None); down = False
++                elif code == 0x35: x = value * W // 4096
++                elif code == 0x36: y = value * H_SCREEN // 4096
++            elif etype == 0 and code == 0:                  # SYN_REPORT
++                if down and kb.pressed is None and x is not None and y is not None and y >= TOP:
++                    if screen_waking(now):                   # this touch only wakes the screen
++                        continue
++                    action = kb.key_at(x, y - TOP)
++                    if action:
++                        kb.pressed, down_since, last_repeat = action, now, now
++                        kb.press(action); kb.draw()
++                elif not down and kb.pressed is not None:
++                    kb.pressed = None; kb.draw()
++
++if __name__ == "__main__":
++    main()
+diff --git a/device/downstream/s10-terminal/s10-osk-start b/device/downstream/s10-terminal/s10-osk-start
+new file mode 100644
+index 0000000000..637959662c
+--- /dev/null
++++ b/device/downstream/s10-terminal/s10-osk-start
+@@ -0,0 +1,8 @@
++#!/bin/sh
++# (Re)start the idle screen-off daemon and the on-screen keyboard. Run as root.
++# Exact patterns, so this script never matches itself.
++pkill -f '^/usr/bin/python3 /usr/bin/s10-osk$'
++pkill -f '^/usr/bin/python3 /usr/bin/s10-idle-blank$'
++sleep 1
++setsid /usr/bin/s10-idle-blank >/dev/null 2>&1 < /dev/null &
++setsid /usr/bin/s10-osk > /tmp/osk.log 2>&1 < /dev/null &
+diff --git a/device/downstream/s10-terminal/s10-term b/device/downstream/s10-terminal/s10-term
+new file mode 100644
+index 0000000000..2816b94c1c
+--- /dev/null
++++ b/device/downstream/s10-terminal/s10-term
+@@ -0,0 +1,6 @@
++#!/bin/sh
++# Terminal session for tty1: fbterm + tmux above the on-screen keyboard.
++[ -f "$HOME/.fbtermrc" ] || cp /usr/share/s10-terminal/fbtermrc "$HOME/.fbtermrc"
++export TERM=fbterm
++export FBTERM_RESERVE_BOTTOM="${FBTERM_RESERVE_BOTTOM:-1100}"   # height of s10-osk
++exec fbterm -- tmux new -A -s main
+diff --git a/device/downstream/s10-terminal/s10-terminal.post-install b/device/downstream/s10-terminal/s10-terminal.post-install
+new file mode 100644
+index 0000000000..2175303157
+--- /dev/null
++++ b/device/downstream/s10-terminal/s10-terminal.post-install
+@@ -0,0 +1,13 @@
++#!/bin/sh
++# Wire up services, the tty1 terminal and the phone user's groups.
++user=$(getent passwd 10000 | cut -d: -f1)
++rc-update -q add local default
++rc-update -q add msm-fb-refresher default
++rc-update -q del unudhcpd.usb0 boot 2>/dev/null
++rc-update -q add unudhcpd.rndis0 default
++if [ -n "$user" ]; then
++	for g in video input audio; do addgroup "$user" "$g" 2>/dev/null; done
++	[ -f /etc/inittab.orig ] || cp /etc/inittab /etc/inittab.orig
++	sed -i "s|^tty1::respawn:.*|tty1::respawn:/bin/su -l $user -c /usr/bin/s10-term|" /etc/inittab
++fi
++exit 0
+diff --git a/device/downstream/s10-terminal/s10-terminal.post-upgrade b/device/downstream/s10-terminal/s10-terminal.post-upgrade
+new file mode 100644
+index 0000000000..2175303157
+--- /dev/null
++++ b/device/downstream/s10-terminal/s10-terminal.post-upgrade
+@@ -0,0 +1,13 @@
++#!/bin/sh
++# Wire up services, the tty1 terminal and the phone user's groups.
++user=$(getent passwd 10000 | cut -d: -f1)
++rc-update -q add local default
++rc-update -q add msm-fb-refresher default
++rc-update -q del unudhcpd.usb0 boot 2>/dev/null
++rc-update -q add unudhcpd.rndis0 default
++if [ -n "$user" ]; then
++	for g in video input audio; do addgroup "$user" "$g" 2>/dev/null; done
++	[ -f /etc/inittab.orig ] || cp /etc/inittab /etc/inittab.orig
++	sed -i "s|^tty1::respawn:.*|tty1::respawn:/bin/su -l $user -c /usr/bin/s10-term|" /etc/inittab
++fi
++exit 0
+diff --git a/device/downstream/s10-terminal/s10-touch-absfix b/device/downstream/s10-terminal/s10-touch-absfix
+new file mode 100755
+index 0000000000..f6d1d644a8
+--- /dev/null
++++ b/device/downstream/s10-terminal/s10-touch-absfix
+@@ -0,0 +1,27 @@
++#!/usr/bin/python3
++# Give Samsung's unnamed axis 0x3e on sec_touchscreen a valid range (EVIOCSABS),
++# because libinput rejects devices with an axis range of [0, -1].
++import fcntl, glob, os, struct, sys
++AXIS = 0x3e
++def eviocsabs(axis):  # _IOW('E', 0xc0 + axis, struct input_absinfo) (6 x s32)
++    return (1 << 30) | (24 << 16) | (ord("E") << 8) | (0xc0 + axis)
++def eviocgabs(axis):  # _IOR('E', 0x40 + axis, struct input_absinfo)
++    return (2 << 30) | (24 << 16) | (ord("E") << 8) | (0x40 + axis)
++devs = sys.argv[1:] or glob.glob("/dev/input/event*")
++for dev in devs:
++    try:
++        name = open(f"/sys/class/input/{os.path.basename(dev)}/device/name").read().strip()
++    except OSError:
++        continue
++    if name != "sec_touchscreen":
++        continue
++    fd = os.open(dev, os.O_RDWR)
++    buf = bytearray(24)
++    fcntl.ioctl(fd, eviocgabs(AXIS), buf)
++    value, lo, hi = struct.unpack_from("3i", buf)
++    if hi < lo or hi == lo:
++        fcntl.ioctl(fd, eviocsabs(AXIS), struct.pack("6i", value, 0, 1, 0, 0, 0))
++        print(f"{dev}: axis 0x3e range [{lo}, {hi}] -> [0, 1]")
++    else:
++        print(f"{dev}: axis 0x3e already [{lo}, {hi}]")
++    os.close(fd)
+diff --git a/device/downstream/s10-terminal/sshd-hardening.conf b/device/downstream/s10-terminal/sshd-hardening.conf
+new file mode 100644
+index 0000000000..f90138f763
+--- /dev/null
++++ b/device/downstream/s10-terminal/sshd-hardening.conf
+@@ -0,0 +1,4 @@
++PasswordAuthentication no
++KbdInteractiveAuthentication no
++PermitRootLogin no
++MaxAuthTries 3
+diff --git a/device/downstream/s10-terminal/tmux.conf b/device/downstream/s10-terminal/tmux.conf
+new file mode 100755
+index 0000000000..8b18a4969b
+--- /dev/null
++++ b/device/downstream/s10-terminal/tmux.conf
+@@ -0,0 +1,20 @@
++# Clean, fast tmux for the S10 terminal
++set -g default-terminal "tmux-256color"
++set -sg escape-time 0
++set -g history-limit 20000
++set -g base-index 1
++setw -g pane-base-index 1
++set -g renumber-windows on
++set -g mouse off
++# minimal status line: window list left, time and battery right
++set -g status-position top
++set -g status-style "bg=black,fg=colour244"
++set -g status-left ""
++set -g status-right "#(cat /sys/class/power_supply/battery/capacity)%%  %H:%M "
++set -g status-interval 30
++setw -g window-status-format " #I #W "
++setw -g window-status-current-format " #I #W "
++setw -g window-status-current-style "fg=white,bold"
++set -g pane-border-style "fg=colour236"
++set -g pane-active-border-style "fg=colour244"
++set -g message-style "bg=black,fg=white"
+diff --git a/device/downstream/s10-terminal/unudhcpd.rndis0.confd b/device/downstream/s10-terminal/unudhcpd.rndis0.confd
+new file mode 100755
+index 0000000000..2d98cbe305
+--- /dev/null
++++ b/device/downstream/s10-terminal/unudhcpd.rndis0.confd
+@@ -0,0 +1 @@
++UNUDHCPD_SERVER="172.16.42.1"
+diff --git a/device/downstream/s10-terminal/wifi-powersave-off.conf b/device/downstream/s10-terminal/wifi-powersave-off.conf
+new file mode 100755
+index 0000000000..111af0beb8
+--- /dev/null
++++ b/device/downstream/s10-terminal/wifi-powersave-off.conf
+@@ -0,0 +1,2 @@
++[connection]
++wifi.powersave = 2
+-- 
+2.53.0
+

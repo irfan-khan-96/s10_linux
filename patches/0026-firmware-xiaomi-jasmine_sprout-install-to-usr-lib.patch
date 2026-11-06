@@ -1,0 +1,41 @@
+From ed08bcd8f85092b0116580d185f7505533ad8bb4 Mon Sep 17 00:00:00 2001
+From: Aster Boese <asterboese@mailbox.org>
+Date: Tue, 3 Nov 2026 16:07:03 -0500
+Subject: [PATCH 026/107] firmware-xiaomi-jasmine_sprout: install to /usr/lib/
+
+/lib/ has been a symlink to /usr/lib/ for quite a while now.
+Thus, this change only moves the files in packaging, but on
+devices, /usr/lib/ has been the sole path in use.
+
+Signed-off-by: Aster Boese <asterboese@mailbox.org>
+Part-of: <https://gitlab.nura.eco/nura/pmaports/-/merge_requests/9873>
+---
+ device/testing/firmware-xiaomi-jasmine_sprout/APKBUILD | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/device/testing/firmware-xiaomi-jasmine_sprout/APKBUILD b/device/testing/firmware-xiaomi-jasmine_sprout/APKBUILD
+index 4d3a8403e2..16aa41af6e 100644
+--- a/device/testing/firmware-xiaomi-jasmine_sprout/APKBUILD
++++ b/device/testing/firmware-xiaomi-jasmine_sprout/APKBUILD
+@@ -1,7 +1,7 @@
+ maintainer="Alexey Minnekhanov <alexeymin@minlexx.ru>"
+ pkgname=firmware-xiaomi-jasmine_sprout
+-pkgver=1
+-pkgrel=1
++pkgver=2
++pkgrel=0
+ pkgdesc="Firmware files for Xiaomi Mi A2"
+ url="https://gitlab.com/m.01001101.01010110/$pkgname"
+ arch="aarch64"
+@@ -18,7 +18,7 @@ source="
+ "
+ 
+ builddir="src"
+-_fwdir="/lib/firmware"
++_fwdir="/usr/lib/firmware"
+ 
+ package() {
+ 	ath10k-fwencoder --create \
+-- 
+2.53.0
+

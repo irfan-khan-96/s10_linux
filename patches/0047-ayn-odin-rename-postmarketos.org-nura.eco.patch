@@ -1,0 +1,46 @@
+From b9ddfbab4e1c43aa4f96a5ab5b83c066ed98e4ed Mon Sep 17 00:00:00 2001
+From: Anton Bambura <jenneron@protonmail.com>
+Date: Mon, 12 Oct 2026 02:52:17 +0300
+Subject: [PATCH 047/107] ayn-odin: rename postmarketos.org -> nura.eco
+
+Part-of: <https://gitlab.nura.eco/nura/pmaports/-/merge_requests/9786>
+---
+ device/testing/device-ayn-odin/APKBUILD   | 4 ++--
+ device/testing/device-ayn-odin/deviceinfo | 2 +-
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/device/testing/device-ayn-odin/APKBUILD b/device/testing/device-ayn-odin/APKBUILD
+index 0680a61e1f..b7a0f395f6 100644
+--- a/device/testing/device-ayn-odin/APKBUILD
++++ b/device/testing/device-ayn-odin/APKBUILD
+@@ -2,7 +2,7 @@
+ maintainer="Stefan Hansson <newbyte@postmarketos.org>"
+ pkgname=device-ayn-odin
+ pkgdesc="AYN Odin"
+-pkgver=11
++pkgver=12
+ pkgrel=0
+ url="https://postmarketos.org"
+ license="MIT"
+@@ -86,7 +86,7 @@ _phosh_m2() {
+ }
+ 
+ sha512sums="
+-b7da33df704bf3ab4b1b641d085889aada958ecbcd22b1efd76ad5a0407a630b339ed38d3af548b7558461e8532d8f504de24d6fa211c6442f4b85623afe348d  deviceinfo
++8bd40fb426071d610709bd5ee907709fd747a76ad8ff0c611013f750bb3da9b4fb0ab44a9df944214ba8583342438d0030c1acc080c600adfd009b2585a99984  deviceinfo
+ 4991bd4df62daf75dc051f45c9250636d819c3509fec650026da72b6fb5fe57a6703fb8a15c1b1d4eb63751eed403fc90e3cf867f799596a0a52960cabfc4f58  kernel-cmdline.conf
+ cd3da21e666698f92382938bf75c8e57e7582b440c8de69c19841a5d36861a8bdd3f4e1ac5282c1e9a8ad5009cc4ffbb2bf40cd8bb8fb9a22acdf5d8caf37e67  hexagonrpcd.confd
+ dc987332abe6d5c7ac511be1045af227d80b9dbe2f907e23e89b62217ca867dd064484caec36f0605dda89a9894da780b75beb23d9b893bd0f9a46593e675393  modules-initfs
+diff --git a/device/testing/device-ayn-odin/deviceinfo b/device/testing/device-ayn-odin/deviceinfo
+index ad31aa809e..36eb614c03 100644
+--- a/device/testing/device-ayn-odin/deviceinfo
++++ b/device/testing/device-ayn-odin/deviceinfo
+@@ -1,4 +1,4 @@
+-# Reference: <https://postmarketos.org/deviceinfo>
++# Reference: <https://nura.eco/deviceinfo>
+ # Please use double quotes only. You can source this file in shell
+ # scripts.
+ 
+-- 
+2.53.0
+

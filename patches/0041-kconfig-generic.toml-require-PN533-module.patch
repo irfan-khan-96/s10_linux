@@ -1,0 +1,28 @@
+From 6435c65108e5e9abd62808664c83d0698d3f5e8e Mon Sep 17 00:00:00 2001
+From: Bart Ribbers <bribbers@disroot.org>
+Date: Tue, 3 Nov 2026 16:29:56 +0100
+Subject: [PATCH 041/107] kconfig-generic.toml: require PN533 module
+
+Used by the ACR122U NFC chip used in an USB NFC reader I have.
+
+Part-of: <https://gitlab.nura.eco/nura/pmaports/-/merge_requests/9869>
+---
+ kconfig-generic.toml | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/kconfig-generic.toml b/kconfig-generic.toml
+index 380e36f852..ee766de849 100644
+--- a/kconfig-generic.toml
++++ b/kconfig-generic.toml
+@@ -347,6 +347,8 @@ RTW89_8852CU = "m"
+ ["category:nfc".">=0.0.0"."all"]
+ NFC = "m"
+ NFC_HCI = "m"
++NFC_PN533_I2C = "m"
++NFC_PN533_USB = "m"
+ NFC_PN544_I2C = "m"
+ NFC_SHDLC = "y"
+ 
+-- 
+2.53.0
+

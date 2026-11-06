@@ -1,0 +1,53 @@
+From 205d347b9e941983dc8c4326b9e996e10e159974 Mon Sep 17 00:00:00 2001
+From: Stefan Hansson <newbyte@postmarketos.org>
+Date: Wed, 30 Sep 2026 19:41:17 +0200
+Subject: [PATCH 016/107] purism-librem5: Drop maintainership
+
+I handed over my phone to @f-izzo.
+
+[ci:skip-vercheck]: Only updating co-maintainers.
+[ci:skip-kconfigcheck]: Doesn't make any sense to fix the kconfig for
+this.
+[ci:skip-build]: Updating co-maintainers doesn't require a rebuild.
+
+Signed-off-by: Stefan Hansson <newbyte@postmarketos.org>
+Part-of: <https://gitlab.nura.eco/nura/pmaports/-/merge_requests/9661>
+---
+ device/community/device-purism-librem5/APKBUILD | 1 -
+ device/community/linux-purism-librem5/APKBUILD  | 1 -
+ device/community/u-boot-librem5/APKBUILD        | 1 -
+ 3 files changed, 3 deletions(-)
+
+diff --git a/device/community/device-purism-librem5/APKBUILD b/device/community/device-purism-librem5/APKBUILD
+index 8aea2d41b3..479c8bdc97 100644
+--- a/device/community/device-purism-librem5/APKBUILD
++++ b/device/community/device-purism-librem5/APKBUILD
+@@ -1,5 +1,4 @@
+ # Reference: <https://postmarketos.org/devicepkg>
+-# Co-Maintainer: Stefan Hansson <newbyte@postmarketos.org>
+ maintainer="Alistair Francis <alistair@alistair23.me>"
+ pkgname=device-purism-librem5
+ pkgver=18
+diff --git a/device/community/linux-purism-librem5/APKBUILD b/device/community/linux-purism-librem5/APKBUILD
+index e077ff89f3..0ec7827ec4 100644
+--- a/device/community/linux-purism-librem5/APKBUILD
++++ b/device/community/linux-purism-librem5/APKBUILD
+@@ -1,5 +1,4 @@
+ # Reference: <https://postmarketos.org/vendorkernel>
+-# Co-Maintainer: Stefan Hansson <newbyte@postmarketos.org>
+ maintainer="Alistair Francis <alistair@alistair23.me>"
+ pkgname=linux-purism-librem5
+ pkgver=6.18.56
+diff --git a/device/community/u-boot-librem5/APKBUILD b/device/community/u-boot-librem5/APKBUILD
+index 0935876c2d..d2f9b21c46 100644
+--- a/device/community/u-boot-librem5/APKBUILD
++++ b/device/community/u-boot-librem5/APKBUILD
+@@ -1,5 +1,4 @@
+ # Mainline u-boot with Librem 5 support and config
+-# Co-Maintainer: Stefan Hansson <newbyte@postmarketos.org>
+ maintainer="Alistair Francis <alistair@alistair23.me>"
+ pkgname=u-boot-librem5
+ pkgver=2022.10
+-- 
+2.53.0
+

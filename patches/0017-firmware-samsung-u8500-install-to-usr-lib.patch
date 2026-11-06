@@ -1,0 +1,41 @@
+From 8ed0110d9a7a7351b80ba9e6b6bdda4520980a0f Mon Sep 17 00:00:00 2001
+From: Aster Boese <asterboese@mailbox.org>
+Date: Fri, 30 Oct 2026 12:52:15 -0400
+Subject: [PATCH 017/107] firmware-samsung-u8500: install to /usr/lib/
+
+/lib/ has been a symlink to /usr/lib/ for quite a while now.
+Thus, this change only moves the files in packaging, but on
+devices, /usr/lib/ has been the sole path in use.
+
+Signed-off-by: Aster Boese <asterboese@mailbox.org>
+Part-of: <https://gitlab.nura.eco/nura/pmaports/-/merge_requests/9850>
+---
+ device/testing/firmware-samsung-u8500/APKBUILD | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/device/testing/firmware-samsung-u8500/APKBUILD b/device/testing/firmware-samsung-u8500/APKBUILD
+index cb0f2df4a1..99072bbf7d 100644
+--- a/device/testing/firmware-samsung-u8500/APKBUILD
++++ b/device/testing/firmware-samsung-u8500/APKBUILD
+@@ -1,7 +1,7 @@
+ maintainer="Stefan Hansson <newbyte@postmarketos.org>"
+ pkgname=firmware-samsung-u8500
+-pkgver=2
+-pkgrel=2
++pkgver=3
++pkgrel=0
+ pkgdesc="Firmware for Samsung Galaxy devices based on ST-Ericsson U8500"
+ url="https://github.com/evokelektrique/samsung-u8500"
+ arch="armv7"
+@@ -12,7 +12,7 @@ source="https://github.com/evokelektrique/samsung-u8500/archive/$_commit.tar.gz"
+ builddir="$srcdir/samsung-u8500-$_commit/brcm"
+ replaces="firmware-samsung-golden"
+ 
+-_fwdir="/lib/firmware/brcm"
++_fwdir="/usr/lib/firmware/brcm"
+ _files="BCM4330B1.hcd BCM4330B1.samsung,codina.hcd BCM4330B1.samsung,gavini.hcd BCM4330B1.samsung,janice.hcd BCM4334B0.hcd BCM4334B0.samsung,golden.hcd BCM4334B0.samsung,kyle.hcd BCM4334B0.samsung,skomer.hcd brcmfmac4330-sdio.bin brcmfmac4330-sdio.samsung,codina.bin brcmfmac4330-sdio.samsung,codina.txt brcmfmac4330-sdio.samsung,gavini.bin brcmfmac4330-sdio.samsung,gavini.txt brcmfmac4330-sdio.samsung,janice.bin brcmfmac4330-sdio.samsung,janice.txt brcmfmac4334-sdio.bin brcmfmac4334-sdio.samsung,golden.bin brcmfmac4334-sdio.samsung,golden.txt brcmfmac4334-sdio.samsung,kyle.bin brcmfmac4334-sdio.samsung,kyle.txt brcmfmac4334-sdio.samsung,skomer.bin brcmfmac4334-sdio.samsung,skomer.txt"
+ 
+ package() {
+-- 
+2.53.0
+

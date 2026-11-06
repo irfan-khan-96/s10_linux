@@ -1,0 +1,47 @@
+From 343d89e2f051449d37426922b7e186f20f07ca5e Mon Sep 17 00:00:00 2001
+From: Aster Boese <asterboese@mailbox.org>
+Date: Tue, 3 Nov 2026 20:02:59 -0500
+Subject: [PATCH 033/107] firmware-samsung-kylepro: install to /usr/lib/
+
+/lib/ has been a symlink to /usr/lib/ for quite a while now.
+Thus, this change only moves the files in packaging, but on
+devices, /usr/lib/ has been the sole path in use.
+
+Signed-off-by: Aster Boese <asterboese@mailbox.org>
+Part-of: <https://gitlab.nura.eco/nura/pmaports/-/merge_requests/9878>
+---
+ device/testing/firmware-samsung-kylepro/APKBUILD | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/device/testing/firmware-samsung-kylepro/APKBUILD b/device/testing/firmware-samsung-kylepro/APKBUILD
+index 666926b401..9656b56e97 100644
+--- a/device/testing/firmware-samsung-kylepro/APKBUILD
++++ b/device/testing/firmware-samsung-kylepro/APKBUILD
+@@ -1,6 +1,6 @@
+ maintainer="knuxify <knuxify@gmail.com>"
+ pkgname=firmware-samsung-kylepro
+-pkgver=1
++pkgver=2
+ pkgrel=0
+ _commit="a6725fbede9f2b1f8fa3177b8733e204c753f108"
+ pkgdesc="Samsung Galaxy Trend Plus/S Duos 2 Firmware"
+@@ -14,13 +14,13 @@ builddir="$srcdir/android_vendor_samsung_kyleproxx-$_commit"
+ package() {
+ 	# WiFi
+ 	install -Dm644 proprietary/etc/wifi/bcmdhd_sta.bin \
+-		"$pkgdir"/lib/firmware/postmarketos/brcm/brcmfmac4330-sdio.samsung,kylepro.bin
++		"$pkgdir"/usr/lib/firmware/postmarketos/brcm/brcmfmac4330-sdio.samsung,kylepro.bin
+ 	install -Dm644 proprietary/etc/wifi/nvram_net.txt \
+-		"$pkgdir"/lib/firmware/postmarketos/brcm/brcmfmac4330-sdio.samsung,kylepro.txt
++		"$pkgdir"/usr/lib/firmware/postmarketos/brcm/brcmfmac4330-sdio.samsung,kylepro.txt
+ 
+ 	# Bluetooth
+ 	install -Dm644 proprietary/bin/BCM4330B1_002.001.003.0967.1173.hcd \
+-		"$pkgdir"/lib/firmware/postmarketos/brcm/BCM4330B1.samsung,kylepro.hcd
++		"$pkgdir"/usr/lib/firmware/postmarketos/brcm/BCM4330B1.samsung,kylepro.hcd
+ }
+ sha512sums="
+ c0ac8771a7ca6be7db485f0f8a3625091ee56513a8d8075659711a0c2c26cd630649d763b6ebda2f7579beeb56e682f6eccfed024cf5400c53cc0b0ec41dff26  firmware-samsung-kylepro-a6725fbede9f2b1f8fa3177b8733e204c753f108.tar.gz
+-- 
+2.53.0
+

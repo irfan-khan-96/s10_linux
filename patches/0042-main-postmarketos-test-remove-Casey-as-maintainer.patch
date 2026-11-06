@@ -1,0 +1,32 @@
+From 54d0fbe507b32aca7967c826ef7d9e29ae029c9c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Pablo=20Correa=20G=C3=B3mez?=
+ <pabloyoyoista@postmarketos.org>
+Date: Wed, 4 Nov 2026 16:02:48 +0100
+Subject: [PATCH 042/107] main/postmarketos-test: remove Casey as maintainer
+
+As requested by herself in
+https://gitlab.nura.eco/nura/pmaports/-/merge_requests/9827
+
+Part-of: <https://gitlab.nura.eco/nura/pmaports/-/merge_requests/9882>
+---
+ main/postmarketos-test/APKBUILD | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/main/postmarketos-test/APKBUILD b/main/postmarketos-test/APKBUILD
+index dae63ec479..561cef1ac4 100644
+--- a/main/postmarketos-test/APKBUILD
++++ b/main/postmarketos-test/APKBUILD
+@@ -1,8 +1,7 @@
+-# Co-Maintainer: Pablo Correa Gomez <pabloyoyoista@postmarketos.org>
+-maintainer="Casey Connolly <kcxt@postmarketos.org>"
++maintainer="Pablo Correa Gomez <pabloyoyoista@postmarketos.org>"
+ pkgname=postmarketos-test
+ pkgver=1.4.0
+-pkgrel=2
++pkgrel=3
+ pkgdesc="Common test utilities for postmarketOS"
+ url="https://postmarketos.org"
+ arch="noarch"
+-- 
+2.53.0
+

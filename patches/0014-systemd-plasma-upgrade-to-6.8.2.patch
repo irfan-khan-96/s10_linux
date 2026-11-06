@@ -1,0 +1,121 @@
+From f2d116c439fdcfdbd6b617c670f016f16b834c2b Mon Sep 17 00:00:00 2001
+From: Bart Ribbers <bribbers@disroot.org>
+Date: Sun, 1 Nov 2026 18:18:55 +0100
+Subject: [PATCH 014/107] systemd/plasma*: upgrade to 6.8.2
+
+Part-of: <https://gitlab.nura.eco/nura/pmaports/-/merge_requests/9862>
+---
+ extra-repos/systemd/drkonqi/APKBUILD              | 4 ++--
+ extra-repos/systemd/kscreenlocker/APKBUILD        | 4 ++--
+ extra-repos/systemd/kwin/APKBUILD                 | 4 ++--
+ extra-repos/systemd/plasma-login-manager/APKBUILD | 4 ++--
+ extra-repos/systemd/plasma-workspace/APKBUILD     | 4 ++--
+ 5 files changed, 10 insertions(+), 10 deletions(-)
+
+diff --git a/extra-repos/systemd/drkonqi/APKBUILD b/extra-repos/systemd/drkonqi/APKBUILD
+index 65fdcc190a..5aee43aa6b 100644
+--- a/extra-repos/systemd/drkonqi/APKBUILD
++++ b/extra-repos/systemd/drkonqi/APKBUILD
+@@ -1,6 +1,6 @@
+ maintainer="team/kde <bribbers@disroot.org>"
+ pkgname=drkonqi
+-pkgver=6.8.1
++pkgver=6.8.2
+ pkgrel=0
+ pkgdesc="The KDE crash handler"
+ # armhf blocked by qt6-qtdeclarative -> ki18n
+@@ -72,5 +72,5 @@ package() {
+ }
+ 
+ sha512sums="
+-968c2345c1cdcc297a734f32988f498791d27a94924f6eb064289982800009d29897a97577f6c5c0cecf50530cb657376366c9ca1e9dc0a792a9138be1d052ec  drkonqi-6.8.1.tar.xz
++9d7e3fb2762f9c579f54456d64338f6e2e0d33105bfe1caf3a122f3d802ff91765582b8b1839684e1d06e70e2f9660839278e6bfe3aa2fdadc2d24273ba9878c  drkonqi-6.8.2.tar.xz
+ "
+diff --git a/extra-repos/systemd/kscreenlocker/APKBUILD b/extra-repos/systemd/kscreenlocker/APKBUILD
+index c92ee70d03..e8ee266516 100644
+--- a/extra-repos/systemd/kscreenlocker/APKBUILD
++++ b/extra-repos/systemd/kscreenlocker/APKBUILD
+@@ -1,7 +1,7 @@
+ # Forked from Alpine to add systemd!
+ maintainer="team/kde <bribbers@disroot.org>"
+ pkgname=kscreenlocker
+-_pkgver=6.8.1
++_pkgver=6.8.2
+ pkgver=9999$_pkgver
+ pkgrel=0
+ pkgdesc="Library and components for secure lock screen architecture"
+@@ -76,7 +76,7 @@ package() {
+ }
+ 
+ sha512sums="
+-c164ae2f23d1b14652ee1a49bcf87d1bbcc030946eaf9c50d62273db81f0516dc19750c80c773318657ec36cbae5e31bd6908d242e57776622aa0ac2d4567a0a  kscreenlocker-6.8.1.tar.xz
++e6b2b05e526af5679a9332c4420873d07be77d1bff9916f7c17e7f5cb8290273e1017b7446bc4444858a98f802ceb962636f842a3acd6849cfb84c14be24de13  kscreenlocker-6.8.2.tar.xz
+ cdbc45fb74a3c43fb2302fe09bf2f9f644ca93693e0110cf748c403762236aaeea8284a8d21fc495014c69b6d5fe4789aaff7687ce9f03dda270490fa5042e2b  kde.pam
+ fe2f244b73b5cccf4b7125b9e3cac0a35566840e4ba2f69937fd8053aa56af71ee43dcbfa9c0f79de9ebe31f656e98a5d38955f77560be5c3535b08215ad8789  kde-fingerprint.pam
+ 2ae866d25224ba345ea9d5ddb2fce668de5c51d1cfbb4d7a048c50107ccd6cffc3231a46855599c0ba3d62ff002a26e45b69d9029f88f4ab42661465a5e526c5  kde-smartcard.pam
+diff --git a/extra-repos/systemd/kwin/APKBUILD b/extra-repos/systemd/kwin/APKBUILD
+index ff9ab0d3f9..b8322450ce 100644
+--- a/extra-repos/systemd/kwin/APKBUILD
++++ b/extra-repos/systemd/kwin/APKBUILD
+@@ -1,7 +1,7 @@
+ # Forked from Alpine to add systemd!
+ maintainer="team/kde <bribbers@disroot.org>"
+ pkgname=kwin
+-_pkgver=6.8.1
++_pkgver=6.8.2
+ pkgver=9999$_pkgver
+ pkgrel=0
+ pkgdesc="An easy to use, but flexible, composited Window Manager"
+@@ -124,5 +124,5 @@ package() {
+ 	DESTDIR="$pkgdir" cmake --install build
+ }
+ sha512sums="
+-658a4a94fc7ee2c4f30d4edd1b4926319bf36fe816bf8cf764dc999f9868add67188f6a1736aef099016ed387f947023d3c1ab4cb65b6c0f2aa32de077ebc886  kwin-6.8.1.tar.xz
++878bc0970e6f6288c510ce2cce777ebba601fc9b22be09ddd6c344a9c623ac013a2d4590adb56c7f3ad09507ec5a76095751f5e274dfbcfc3afa9e5ea0399ec1  kwin-6.8.2.tar.xz
+ "
+diff --git a/extra-repos/systemd/plasma-login-manager/APKBUILD b/extra-repos/systemd/plasma-login-manager/APKBUILD
+index 6153b9c02d..305fe89f34 100644
+--- a/extra-repos/systemd/plasma-login-manager/APKBUILD
++++ b/extra-repos/systemd/plasma-login-manager/APKBUILD
+@@ -2,7 +2,7 @@
+ # group=kde-plasma
+ maintainer="team/kde <bribbers@disroot.org>"
+ pkgname=plasma-login-manager
+-pkgver=6.8.1
++pkgver=6.8.2
+ pkgrel=0
+ pkgdesc="A display manager for KDE Plasma"
+ # armhf blocked by qt6-qtdeclarative
+@@ -80,7 +80,7 @@ package() {
+ 
+ 
+ sha512sums="
+-44864e87f5e2e29a2a3ae5912a55f377cfcb79f213132ffa5b2b68e8101154d703b5916d67d7c760c1a4706b07fc6dfa6d58f666f1060a0673f84d71ad73939c  plasma-login-manager-6.8.1.tar.xz
++2b90695add2c46a8b0cbd00597658c1b9973d6b545546c6feeb5e701c7d164bfc036a03b0215a1bcb436d9f62e591ea317c734d70adae43edd2570420f055422  plasma-login-manager-6.8.2.tar.xz
+ 77fcd3ace910cc694266afb32ac75258e954dfcefa206dfc5f42204b4e3e14528d47a9e28e6cb0aa7f1670450a42023ce4ee85eac76fce2806bab54b2d1aa37c  plasmalogin.pam
+ 44d0fce5ed4dd19c0a66cd3b191f33658dcaadf619711c8ed8dccfa8697e8464836780404307271922a910e3df631b8cecfec77822a252e3eabf12c28e65dfa1  plasmalogin-autologin.pam
+ e82cf4dbca78ea73cc26378ca94dca12d9bb48fe13c29ff1e8403f44f4c83ba5000b8cfff0d2c4161ef9e8218edda82d4226ea571b70ffe7042ed3f2580538cd  plasmalogin-greeter.pam
+diff --git a/extra-repos/systemd/plasma-workspace/APKBUILD b/extra-repos/systemd/plasma-workspace/APKBUILD
+index 1573465038..6ec0f6f85f 100644
+--- a/extra-repos/systemd/plasma-workspace/APKBUILD
++++ b/extra-repos/systemd/plasma-workspace/APKBUILD
+@@ -1,7 +1,7 @@
+ # Forked from Alpine to add systemd!
+ maintainer="team/kde <bribbers@disroot.org>"
+ pkgname=plasma-workspace
+-_pkgver=6.8.1
++_pkgver=6.8.2
+ pkgver=9999$_pkgver
+ pkgrel=0
+ pkgdesc="KDE Plasma Workspace"
+@@ -205,6 +205,6 @@ package() {
+ }
+ 
+ sha512sums="
+-000b60f9a654d4d1151293937881a3c5c568b4c7519d7345b138c87764d01b7e6af91c50a81b344b6d470ab0bd188bae4c11d749a31b548115ab90b47a08f6c2  plasma-workspace-6.8.1.tar.xz
++32fd7185d06ba5cd5f77e59b8eb013feaa842c2dff24431f4b75e081c961160a9d0302bcb14e397b1218b53713d6d4168618baee05291668885eb63085fc9c79  plasma-workspace-6.8.2.tar.xz
+ 672bde528ca9a3c07fa80b0a26d29becc3c158389e3c8d273c829264cc7f8f5ba502e71715c2eacd76c77e90f461dd0238bb7e31876070eb8b7df767d6f3aa53  org.kde.timezone.rules
+ "
+-- 
+2.53.0
+

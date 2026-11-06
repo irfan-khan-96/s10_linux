@@ -1,0 +1,128 @@
+From 5bd7fd10c1af76d8fe916fe70e6376249581d557 Mon Sep 17 00:00:00 2001
+From: Antoine Martin <dev@ayakael.net>
+Date: Tue, 3 Nov 2026 11:36:08 -0500
+Subject: [PATCH 023/107] {device,u-boot}-clockworkpi-uconsole-radxa-cm5: move
+ from downstream to testing
+
+Move device to testing now that kernel is mainline. U-boot is still
+vendored, so does not support EFI boot, a requirement for commmunity
+kconfig.
+
+[ci:skip-vercheck]: package moves are considered by pytest-commits as
+new packages, which triggers bad checks.
+
+Part-of: <https://gitlab.nura.eco/nura/pmaports/-/merge_requests/8285>
+---
+ .../device-clockworkpi-uconsole-radxa-cm5/APKBUILD                | 0
+ .../device-clockworkpi-uconsole-radxa-cm5/cwu50-init.sh           | 0
+ .../device-clockworkpi-uconsole-radxa-cm5/deviceinfo              | 0
+ .../device-clockworkpi-uconsole-radxa-cm5/gunzip-vmlinuz.sh       | 0
+ .../device-clockworkpi-uconsole-radxa-cm5/kernel-cmdline.conf     | 0
+ .../device-clockworkpi-uconsole-radxa-cm5/modprobe.conf           | 0
+ .../device-clockworkpi-uconsole-radxa-cm5/modules-initfs          | 0
+ .../device-clockworkpi-uconsole-radxa-cm5/modules-load.conf       | 0
+ .../device-clockworkpi-uconsole-radxa-cm5/partition-table.txt     | 0
+ .../device-clockworkpi-uconsole-radxa-cm5/xorg.conf               | 0
+ .../0001-menu-fix-timeout-duration.patch                          | 0
+ .../0002-rockchip-move-crypto-functions-to-rk3588s.patch          | 0
+ .../0003-rk3588-support-compressed-kernel.patch                   | 0
+ .../0004-rk3588-serial-output-s4.patch                            | 0
+ .../u-boot-clockworkpi-uconsole-radxa-cm5/APKBUILD                | 0
+ .../disable-spl-spi-load.patch                                    | 0
+ .../u-boot-clockworkpi-uconsole-radxa-cm5/update-u-boot           | 0
+ .../u-boot-clockworkpi-uconsole-radxa-cm5/use-python3.patch       | 0
+ 18 files changed, 0 insertions(+), 0 deletions(-)
+ rename device/{downstream => testing}/device-clockworkpi-uconsole-radxa-cm5/APKBUILD (100%)
+ rename device/{downstream => testing}/device-clockworkpi-uconsole-radxa-cm5/cwu50-init.sh (100%)
+ rename device/{downstream => testing}/device-clockworkpi-uconsole-radxa-cm5/deviceinfo (100%)
+ rename device/{downstream => testing}/device-clockworkpi-uconsole-radxa-cm5/gunzip-vmlinuz.sh (100%)
+ rename device/{downstream => testing}/device-clockworkpi-uconsole-radxa-cm5/kernel-cmdline.conf (100%)
+ rename device/{downstream => testing}/device-clockworkpi-uconsole-radxa-cm5/modprobe.conf (100%)
+ rename device/{downstream => testing}/device-clockworkpi-uconsole-radxa-cm5/modules-initfs (100%)
+ rename device/{downstream => testing}/device-clockworkpi-uconsole-radxa-cm5/modules-load.conf (100%)
+ rename device/{downstream => testing}/device-clockworkpi-uconsole-radxa-cm5/partition-table.txt (100%)
+ rename device/{downstream => testing}/device-clockworkpi-uconsole-radxa-cm5/xorg.conf (100%)
+ rename device/{downstream => testing}/u-boot-clockworkpi-uconsole-radxa-cm5/0001-menu-fix-timeout-duration.patch (100%)
+ rename device/{downstream => testing}/u-boot-clockworkpi-uconsole-radxa-cm5/0002-rockchip-move-crypto-functions-to-rk3588s.patch (100%)
+ rename device/{downstream => testing}/u-boot-clockworkpi-uconsole-radxa-cm5/0003-rk3588-support-compressed-kernel.patch (100%)
+ rename device/{downstream => testing}/u-boot-clockworkpi-uconsole-radxa-cm5/0004-rk3588-serial-output-s4.patch (100%)
+ rename device/{downstream => testing}/u-boot-clockworkpi-uconsole-radxa-cm5/APKBUILD (100%)
+ rename device/{downstream => testing}/u-boot-clockworkpi-uconsole-radxa-cm5/disable-spl-spi-load.patch (100%)
+ rename device/{downstream => testing}/u-boot-clockworkpi-uconsole-radxa-cm5/update-u-boot (100%)
+ rename device/{downstream => testing}/u-boot-clockworkpi-uconsole-radxa-cm5/use-python3.patch (100%)
+
+diff --git a/device/downstream/device-clockworkpi-uconsole-radxa-cm5/APKBUILD b/device/testing/device-clockworkpi-uconsole-radxa-cm5/APKBUILD
+similarity index 100%
+rename from device/downstream/device-clockworkpi-uconsole-radxa-cm5/APKBUILD
+rename to device/testing/device-clockworkpi-uconsole-radxa-cm5/APKBUILD
+diff --git a/device/downstream/device-clockworkpi-uconsole-radxa-cm5/cwu50-init.sh b/device/testing/device-clockworkpi-uconsole-radxa-cm5/cwu50-init.sh
+similarity index 100%
+rename from device/downstream/device-clockworkpi-uconsole-radxa-cm5/cwu50-init.sh
+rename to device/testing/device-clockworkpi-uconsole-radxa-cm5/cwu50-init.sh
+diff --git a/device/downstream/device-clockworkpi-uconsole-radxa-cm5/deviceinfo b/device/testing/device-clockworkpi-uconsole-radxa-cm5/deviceinfo
+similarity index 100%
+rename from device/downstream/device-clockworkpi-uconsole-radxa-cm5/deviceinfo
+rename to device/testing/device-clockworkpi-uconsole-radxa-cm5/deviceinfo
+diff --git a/device/downstream/device-clockworkpi-uconsole-radxa-cm5/gunzip-vmlinuz.sh b/device/testing/device-clockworkpi-uconsole-radxa-cm5/gunzip-vmlinuz.sh
+similarity index 100%
+rename from device/downstream/device-clockworkpi-uconsole-radxa-cm5/gunzip-vmlinuz.sh
+rename to device/testing/device-clockworkpi-uconsole-radxa-cm5/gunzip-vmlinuz.sh
+diff --git a/device/downstream/device-clockworkpi-uconsole-radxa-cm5/kernel-cmdline.conf b/device/testing/device-clockworkpi-uconsole-radxa-cm5/kernel-cmdline.conf
+similarity index 100%
+rename from device/downstream/device-clockworkpi-uconsole-radxa-cm5/kernel-cmdline.conf
+rename to device/testing/device-clockworkpi-uconsole-radxa-cm5/kernel-cmdline.conf
+diff --git a/device/downstream/device-clockworkpi-uconsole-radxa-cm5/modprobe.conf b/device/testing/device-clockworkpi-uconsole-radxa-cm5/modprobe.conf
+similarity index 100%
+rename from device/downstream/device-clockworkpi-uconsole-radxa-cm5/modprobe.conf
+rename to device/testing/device-clockworkpi-uconsole-radxa-cm5/modprobe.conf
+diff --git a/device/downstream/device-clockworkpi-uconsole-radxa-cm5/modules-initfs b/device/testing/device-clockworkpi-uconsole-radxa-cm5/modules-initfs
+similarity index 100%
+rename from device/downstream/device-clockworkpi-uconsole-radxa-cm5/modules-initfs
+rename to device/testing/device-clockworkpi-uconsole-radxa-cm5/modules-initfs
+diff --git a/device/downstream/device-clockworkpi-uconsole-radxa-cm5/modules-load.conf b/device/testing/device-clockworkpi-uconsole-radxa-cm5/modules-load.conf
+similarity index 100%
+rename from device/downstream/device-clockworkpi-uconsole-radxa-cm5/modules-load.conf
+rename to device/testing/device-clockworkpi-uconsole-radxa-cm5/modules-load.conf
+diff --git a/device/downstream/device-clockworkpi-uconsole-radxa-cm5/partition-table.txt b/device/testing/device-clockworkpi-uconsole-radxa-cm5/partition-table.txt
+similarity index 100%
+rename from device/downstream/device-clockworkpi-uconsole-radxa-cm5/partition-table.txt
+rename to device/testing/device-clockworkpi-uconsole-radxa-cm5/partition-table.txt
+diff --git a/device/downstream/device-clockworkpi-uconsole-radxa-cm5/xorg.conf b/device/testing/device-clockworkpi-uconsole-radxa-cm5/xorg.conf
+similarity index 100%
+rename from device/downstream/device-clockworkpi-uconsole-radxa-cm5/xorg.conf
+rename to device/testing/device-clockworkpi-uconsole-radxa-cm5/xorg.conf
+diff --git a/device/downstream/u-boot-clockworkpi-uconsole-radxa-cm5/0001-menu-fix-timeout-duration.patch b/device/testing/u-boot-clockworkpi-uconsole-radxa-cm5/0001-menu-fix-timeout-duration.patch
+similarity index 100%
+rename from device/downstream/u-boot-clockworkpi-uconsole-radxa-cm5/0001-menu-fix-timeout-duration.patch
+rename to device/testing/u-boot-clockworkpi-uconsole-radxa-cm5/0001-menu-fix-timeout-duration.patch
+diff --git a/device/downstream/u-boot-clockworkpi-uconsole-radxa-cm5/0002-rockchip-move-crypto-functions-to-rk3588s.patch b/device/testing/u-boot-clockworkpi-uconsole-radxa-cm5/0002-rockchip-move-crypto-functions-to-rk3588s.patch
+similarity index 100%
+rename from device/downstream/u-boot-clockworkpi-uconsole-radxa-cm5/0002-rockchip-move-crypto-functions-to-rk3588s.patch
+rename to device/testing/u-boot-clockworkpi-uconsole-radxa-cm5/0002-rockchip-move-crypto-functions-to-rk3588s.patch
+diff --git a/device/downstream/u-boot-clockworkpi-uconsole-radxa-cm5/0003-rk3588-support-compressed-kernel.patch b/device/testing/u-boot-clockworkpi-uconsole-radxa-cm5/0003-rk3588-support-compressed-kernel.patch
+similarity index 100%
+rename from device/downstream/u-boot-clockworkpi-uconsole-radxa-cm5/0003-rk3588-support-compressed-kernel.patch
+rename to device/testing/u-boot-clockworkpi-uconsole-radxa-cm5/0003-rk3588-support-compressed-kernel.patch
+diff --git a/device/downstream/u-boot-clockworkpi-uconsole-radxa-cm5/0004-rk3588-serial-output-s4.patch b/device/testing/u-boot-clockworkpi-uconsole-radxa-cm5/0004-rk3588-serial-output-s4.patch
+similarity index 100%
+rename from device/downstream/u-boot-clockworkpi-uconsole-radxa-cm5/0004-rk3588-serial-output-s4.patch
+rename to device/testing/u-boot-clockworkpi-uconsole-radxa-cm5/0004-rk3588-serial-output-s4.patch
+diff --git a/device/downstream/u-boot-clockworkpi-uconsole-radxa-cm5/APKBUILD b/device/testing/u-boot-clockworkpi-uconsole-radxa-cm5/APKBUILD
+similarity index 100%
+rename from device/downstream/u-boot-clockworkpi-uconsole-radxa-cm5/APKBUILD
+rename to device/testing/u-boot-clockworkpi-uconsole-radxa-cm5/APKBUILD
+diff --git a/device/downstream/u-boot-clockworkpi-uconsole-radxa-cm5/disable-spl-spi-load.patch b/device/testing/u-boot-clockworkpi-uconsole-radxa-cm5/disable-spl-spi-load.patch
+similarity index 100%
+rename from device/downstream/u-boot-clockworkpi-uconsole-radxa-cm5/disable-spl-spi-load.patch
+rename to device/testing/u-boot-clockworkpi-uconsole-radxa-cm5/disable-spl-spi-load.patch
+diff --git a/device/downstream/u-boot-clockworkpi-uconsole-radxa-cm5/update-u-boot b/device/testing/u-boot-clockworkpi-uconsole-radxa-cm5/update-u-boot
+similarity index 100%
+rename from device/downstream/u-boot-clockworkpi-uconsole-radxa-cm5/update-u-boot
+rename to device/testing/u-boot-clockworkpi-uconsole-radxa-cm5/update-u-boot
+diff --git a/device/downstream/u-boot-clockworkpi-uconsole-radxa-cm5/use-python3.patch b/device/testing/u-boot-clockworkpi-uconsole-radxa-cm5/use-python3.patch
+similarity index 100%
+rename from device/downstream/u-boot-clockworkpi-uconsole-radxa-cm5/use-python3.patch
+rename to device/testing/u-boot-clockworkpi-uconsole-radxa-cm5/use-python3.patch
+-- 
+2.53.0
+

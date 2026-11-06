@@ -1,0 +1,50 @@
+From f756841202c992d00c55cccc731f6fc9a9a3b2c4 Mon Sep 17 00:00:00 2001
+From: khan <khan@localhost>
+Date: Sat, 31 Oct 2026 12:44:55 +0100
+Subject: [PATCH 074/107] device-samsung-beyond1lte-downstream: gzip
+ initramfs-extra
+
+---
+ .../downstream/device-samsung-beyond1lte-downstream/APKBUILD  | 4 ++--
+ .../device-samsung-beyond1lte-downstream/deviceinfo           | 3 +++
+ 2 files changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/device/downstream/device-samsung-beyond1lte-downstream/APKBUILD b/device/downstream/device-samsung-beyond1lte-downstream/APKBUILD
+index 34ceb68f26..9b56587d4e 100644
+--- a/device/downstream/device-samsung-beyond1lte-downstream/APKBUILD
++++ b/device/downstream/device-samsung-beyond1lte-downstream/APKBUILD
+@@ -4,7 +4,7 @@ maintainer="chiffa <chiffathefoxx@gmail.com>"
+ pkgname=device-samsung-beyond1lte-downstream
+ pkgdesc="Samsung Galaxy S10 (Downstream)"
+ pkgver=7
+-pkgrel=4
++pkgrel=5
+ url="https://postmarketos.org"
+ license="MIT"
+ arch="aarch64"
+@@ -28,7 +28,7 @@ package() {
+ }
+ 
+ sha512sums="
+-1dd09b71f7629fe89f65f71634b14a1b2f71071efeb9f18aeabd7a80588972050a331ddc5930c7cdef427f966565de80089498ed73d0c4610769ed03ba06ba54  deviceinfo
++2fc2fdcaf9226c3b1b43b2e917564c8d8b3f542f680a0823ad891ff07e1bfc6d1799c5e4e66d56084ec9df37da06d29855368fcc953d8e23668df104459a6f7f  deviceinfo
+ cb0731b5e71b427024bb47cd70aa48d3be409a89aa476f3fd4dea8e5b42ef87371a65bbe836bca7da04c0384178ad293b44da8a88557ad04fc57857bef502050  kernel-cmdline.conf
+ 03deb65563f4b4421491643854927e88b2d5880b8b19ee6baa4d3fa1ec3f7d7a1c2977fd2c3c41270254efea6fa0c5fdae0a382e7c427d5a3bf6fad34c25375e  initfs-hook.sh
+ "
+diff --git a/device/downstream/device-samsung-beyond1lte-downstream/deviceinfo b/device/downstream/device-samsung-beyond1lte-downstream/deviceinfo
+index 56c3a9e18c..f208df8da0 100644
+--- a/device/downstream/device-samsung-beyond1lte-downstream/deviceinfo
++++ b/device/downstream/device-samsung-beyond1lte-downstream/deviceinfo
+@@ -40,6 +40,9 @@ deviceinfo_bootimg_append_seandroidenforce="true"
+ deviceinfo_create_initfs_extra="true"
+ # 4.14 downstream kernel has no zstd initramfs support (only gzip/lz4)
+ deviceinfo_initfs_compression="gzip"
++# stage-1 extract_initramfs_extra() always runs "gzip -d", but mkinitfs
++# compresses initramfs-extra with zstd unless told otherwise
++deviceinfo_initfs_extra_compression="gzip"
+ 
+ # Samsung's downstream f_ncm never signals link-up to the host (carrier stays 0),
+ # so use RNDIS. Samsung's tethering IDs let Windows bind its RNDIS driver
+-- 
+2.53.0
+

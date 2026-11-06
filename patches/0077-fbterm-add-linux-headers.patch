@@ -1,0 +1,25 @@
+From 59339e3cbf6af3527f5a0c3b45d92aa2e76e9740 Mon Sep 17 00:00:00 2001
+From: khan <khan@localhost>
+Date: Sun, 1 Nov 2026 18:29:37 +0100
+Subject: [PATCH 077/107] fbterm: add linux-headers
+
+---
+ main/fbterm/APKBUILD | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/main/fbterm/APKBUILD b/main/fbterm/APKBUILD
+index 2556d4f04c..6a3150d0cb 100644
+--- a/main/fbterm/APKBUILD
++++ b/main/fbterm/APKBUILD
+@@ -7,7 +7,7 @@ pkgdesc="Fast framebuffer terminal emulator with TrueType fonts"
+ url="https://salsa.debian.org/debian/fbterm"
+ arch="aarch64"
+ license="GPL-2.0-or-later"
+-makedepends="autoconf automake fontconfig-dev freetype-dev ncurses"
++makedepends="autoconf automake fontconfig-dev freetype-dev linux-headers ncurses"
+ options="!check"
+ source="https://deb.debian.org/debian/pool/main/f/fbterm/fbterm_$pkgver.orig.tar.gz
+ 	https://deb.debian.org/debian/pool/main/f/fbterm/fbterm_$pkgver-$_debrel.debian.tar.xz
+-- 
+2.53.0
+

@@ -1,0 +1,26 @@
+From c3a9afb479a904663460792ac186b23274c33d7f Mon Sep 17 00:00:00 2001
+From: Anton Bambura <jenneron@protonmail.com>
+Date: Tue, 27 Oct 2026 14:42:59 +0200
+Subject: [PATCH 050/107] device-ayn-odin: add myself as co-maintainer
+
+[ci:skip-kconfigcheck]: will be fixed during next contributions
+[ci:skip-vercheck]: adding a Co-maintainer comment, doesn't need a rebuild
+
+Part-of: <https://gitlab.nura.eco/nura/pmaports/-/merge_requests/9840>
+---
+ device/testing/device-ayn-odin/APKBUILD | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/device/testing/device-ayn-odin/APKBUILD b/device/testing/device-ayn-odin/APKBUILD
+index b7a0f395f6..d64cdc5d01 100644
+--- a/device/testing/device-ayn-odin/APKBUILD
++++ b/device/testing/device-ayn-odin/APKBUILD
+@@ -1,4 +1,5 @@
+ # Reference: <https://postmarketos.org/devicepkg>
++# Co-Maintainer: Anton Bambura <jenneron@protonmail.com>
+ maintainer="Stefan Hansson <newbyte@postmarketos.org>"
+ pkgname=device-ayn-odin
+ pkgdesc="AYN Odin"
+-- 
+2.53.0
+
