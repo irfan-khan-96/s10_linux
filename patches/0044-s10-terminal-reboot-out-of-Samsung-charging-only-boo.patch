@@ -1,0 +1,108 @@
+From 6ffa934c12b4ed98a2834d4564cf586c244f0235 Mon Sep 17 00:00:00 2001
+From: khan <khan@localhost>
+Date: Fri, 6 Nov 2026 23:47:24 +0100
+Subject: [PATCH 44/44] s10-terminal: reboot out of Samsung charging-only boot
+ (no touch); keyboard waits for the touchscreen
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ device/downstream/s10-terminal/05-s10-lpm.start | 17 +++++++++++++++++
+ device/downstream/s10-terminal/APKBUILD         |  8 +++++---
+ device/downstream/s10-terminal/s10-osk          | 10 +++++++++-
+ 3 files changed, 31 insertions(+), 4 deletions(-)
+ create mode 100644 device/downstream/s10-terminal/05-s10-lpm.start
+
+diff --git a/device/downstream/s10-terminal/05-s10-lpm.start b/device/downstream/s10-terminal/05-s10-lpm.start
+new file mode 100644
+index 0000000000..4144371479
+--- /dev/null
++++ b/device/downstream/s10-terminal/05-s10-lpm.start
+@@ -0,0 +1,17 @@
++#!/bin/sh
++# Plugging the charger into a switched-off S10 makes the bootloader start the kernel in
++# Samsung's charging-only mode (androidboot.mode=charger): the kernel then sets lpcharge
++# and the touchscreen, hall and similar drivers refuse to load. Reboot into a normal boot.
++# Guard: at most one such reboot per 10 minutes, so a bootloader that insists cannot loop.
++grep -q 'androidboot.mode=charger' /proc/cmdline || exit 0
++stamp=/var/lib/s10-terminal/lpm-reboot
++mkdir -p /var/lib/s10-terminal
++now=$(date +%s)
++last=$(cat "$stamp" 2>/dev/null || echo 0)
++if [ $((now - last)) -lt 600 ]; then
++	echo "s10: charging-only boot again within 10 min, staying up without touch" > /dev/kmsg
++	exit 0
++fi
++echo "$now" > "$stamp"
++echo "s10: charging-only boot (no touchscreen), rebooting normally" > /dev/kmsg
++reboot
+diff --git a/device/downstream/s10-terminal/APKBUILD b/device/downstream/s10-terminal/APKBUILD
+index 091ea77158..d10331e03f 100644
+--- a/device/downstream/s10-terminal/APKBUILD
++++ b/device/downstream/s10-terminal/APKBUILD
+@@ -2,7 +2,7 @@
+ # setup that turns samsung-beyond1lte-downstream into a pocket terminal.
+ pkgname=s10-terminal
+ pkgver=1
+-pkgrel=18
++pkgrel=19
+ pkgdesc="Galaxy S10 pocket terminal: fbterm + tmux, on-screen keyboard, hardening"
+ url="https://postmarketos.org"
+ arch="aarch64"
+@@ -37,6 +37,7 @@ source="
+ 	s10-term
+ 	fbtermrc
+ 	tmux.conf
++	05-s10-lpm.start
+ 	10-firewall.start
+ 	20-display-on.start
+ 	30-usb-dhcp.start
+@@ -62,7 +63,7 @@ package() {
+ 	install -Dm644 "$srcdir"/OFL-VT323.txt "$pkgdir"/usr/share/licenses/$pkgname/OFL-VT323.txt
+ 	install -Dm644 "$srcdir"/fbtermrc "$pkgdir"/usr/share/s10-terminal/fbtermrc
+ 	install -Dm644 "$srcdir"/tmux.conf "$pkgdir"/etc/tmux.conf
+-	for f in 10-firewall 20-display-on 30-usb-dhcp 40-s10-tuning 45-s10-battery 50-s10-idle-blank 60-s10-osk; do
++	for f in 05-s10-lpm 10-firewall 20-display-on 30-usb-dhcp 40-s10-tuning 45-s10-battery 50-s10-idle-blank 60-s10-osk; do
+ 		install -Dm755 "$srcdir/$f.start" "$pkgdir/etc/local.d/$f.start"
+ 	done
+ 	install -Dm644 "$srcdir"/90-s10-touch-absfix.rules \
+@@ -77,7 +78,7 @@ package() {
+ }
+ 
+ sha512sums="
+-9c035ccb540472c315445d44f7d2c0637c81750ebc41d0f388b6f873c14104734f497ba437491bd12fcd380834a17e1e1a4a129a51c6e663492752a42e83136f  s10-osk
++1272b8fc66197afe0aa7c19c4831b5f015269d6019489b1beef85853ae637029f7e1e637b43298918a5a3b01af27b696c9c8eb28d7ae4acf113e4930e488fda7  s10-osk
+ 7978663b06fd47636c689e0d2769e706bf37bb475b9b9b190193ec186f2a7697468a969c984af242f4b892754d907918d8a0a7b24300bae7465e76607dc380ee  s10-menu
+ 39bf55c1e453af330e2b67387113c32257da794aa9208ef2d8dcb5311a1c7dfc086387ad67bdb3d1076a9613abedf53450e515fbf1c6f6ed8e6da61b69fbd7b6  s10-status
+ 2ad64dddbc4290cb8b1fe600ae686891f25ed5c589263c40027fadb460eba5755fd48de5ed57cf09f02d51dc0f8d442a6915ca77386422f4c03dec2a3f45fd5f  s10-splash
+@@ -88,6 +89,7 @@ f5b670528587d518a367b66ae15fd9b5583b7ad666e03051523cf56a1b007469fc5fad535f4d22b1
+ 00e1c13c89a90739e66e37368cfc7fb9fad81b60ccedb84c2826948f77924aee8907aa227b0e845f09e2ca5331625d08769c0e63beae7bbae8360ce319808e2f  s10-term
+ 57a90c056354401584f280ba2e94483dd08dc89fbbd643626f04a1d121ddd0c6a180efb477d863ecd4b2da95325ca8576d355c4467a774c39a08f594978e2675  fbtermrc
+ fd54415383f1a8009f3dd726b40dba7dcc4a2f655ecdd6a076cce1de0ecdd2743c5c52ecf0d6b8148b24b9d7284063fd99effd4ea0fc5958073cb1b017b719af  tmux.conf
++c433073ec72b77dbcf13882f7fd92a5915fee1fe3dd3db60fc1e966de7a694e5c63a3b0e2f30689815ae8242d26c2f8807664a9d6c1bcac9d423ff8cd0561f17  05-s10-lpm.start
+ 2925ca72c125e154331429da14c4b2d515c0cb0b023cae521326f457d098a35ff58c78b5a32e2d950eacd2cb97e086c914e20067577232243c05baf72504df78  10-firewall.start
+ 0f7f7f1b2d71ca3c5b4082b82ce36f021c96ba8c14db74a4c552b8a931133dabdfdd69628a4d1830e84f2b0b1da40a8624ea100f548f782932fad2ad49846de3  20-display-on.start
+ 13ff9308e064e707cdf329b867d29ba7668e5662c36cc58212b1e13dbb4314c1e2d64b5ec2c9b6a0088f38c8d677162a7ecc1a4d7a488ff6ee86c3c8bf9680de  30-usb-dhcp.start
+diff --git a/device/downstream/s10-terminal/s10-osk b/device/downstream/s10-terminal/s10-osk
+index 14cfee7e09..b9afd43439 100644
+--- a/device/downstream/s10-terminal/s10-osk
++++ b/device/downstream/s10-terminal/s10-osk
+@@ -693,7 +693,15 @@ def main():
+     display = Display()
+     vis = Visibility(kb, display)
+     touch = Touch(kb, vis, Gestures(vis))
+-    tfd = os.open(TOUCH, os.O_RDONLY)
++    # The touchscreen can come up late (or, rarely, not at all after a boot): wait for it
++    # instead of exiting, so a USB keyboard and the volume keys keep working meanwhile.
++    while True:
++        try:
++            tfd = os.open(TOUCH, os.O_RDONLY)
++            break
++        except FileNotFoundError:
++            print(f"{time.strftime('%H:%M:%S')} waiting for {TOUCH}", flush=True)
++            time.sleep(2)
+     x = y = None
+     down = was_down = False
+     slot = 0
+-- 
+2.53.0
+

@@ -693,7 +693,15 @@ def main():
     display = Display()
     vis = Visibility(kb, display)
     touch = Touch(kb, vis, Gestures(vis))
-    tfd = os.open(TOUCH, os.O_RDONLY)
+    # The touchscreen can come up late (or, rarely, not at all after a boot): wait for it
+    # instead of exiting, so a USB keyboard and the volume keys keep working meanwhile.
+    while True:
+        try:
+            tfd = os.open(TOUCH, os.O_RDONLY)
+            break
+        except FileNotFoundError:
+            print(f"{time.strftime('%H:%M:%S')} waiting for {TOUCH}", flush=True)
+            time.sleep(2)
     x = y = None
     down = was_down = False
     slot = 0

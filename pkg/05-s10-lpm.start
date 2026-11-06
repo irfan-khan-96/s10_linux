@@ -1,0 +1,17 @@
+#!/bin/sh
+# Plugging the charger into a switched-off S10 makes the bootloader start the kernel in
+# Samsung's charging-only mode (androidboot.mode=charger): the kernel then sets lpcharge
+# and the touchscreen, hall and similar drivers refuse to load. Reboot into a normal boot.
+# Guard: at most one such reboot per 10 minutes, so a bootloader that insists cannot loop.
+grep -q 'androidboot.mode=charger' /proc/cmdline || exit 0
+stamp=/var/lib/s10-terminal/lpm-reboot
+mkdir -p /var/lib/s10-terminal
+now=$(date +%s)
+last=$(cat "$stamp" 2>/dev/null || echo 0)
+if [ $((now - last)) -lt 600 ]; then
+	echo "s10: charging-only boot again within 10 min, staying up without touch" > /dev/kmsg
+	exit 0
+fi
+echo "$now" > "$stamp"
+echo "s10: charging-only boot (no touchscreen), rebooting normally" > /dev/kmsg
+reboot
