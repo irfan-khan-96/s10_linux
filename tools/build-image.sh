@@ -4,6 +4,7 @@
 set -e
 OUT=/mnt/c/Users/irfan/Desktop/s10-postmarketos/images
 cd ~/pmbootstrap
+./pmbootstrap.py -y zap          # fresh chroots (keeps built packages); avoids the "older than 2 days" warning
 ./pmbootstrap.py config extra_packages
 ./pmbootstrap.py build fbterm s10-terminal
 ./pmbootstrap.py install
