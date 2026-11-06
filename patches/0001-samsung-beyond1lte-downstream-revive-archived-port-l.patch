@@ -1,0 +1,72 @@
+From 0d8b7f3c63bbea89f9eb91a212ae4ca743654d6c Mon Sep 17 00:00:00 2001
+From: khan <khan@localhost>
+Date: Sat, 31 Oct 2026 04:12:50 +0100
+Subject: [PATCH 01/43] samsung-beyond1lte-downstream: revive archived port
+ (local)
+
+---
+ .../device-samsung-beyond1lte-downstream/APKBUILD                 | 0
+ .../device-samsung-beyond1lte-downstream/deviceinfo               | 0
+ .../device-samsung-beyond1lte-downstream/initfs-hook.sh           | 0
+ .../device-samsung-beyond1lte-downstream/kernel-cmdline.conf      | 0
+ .../{archived => downstream}/firmware-samsung-beyond1lte/APKBUILD | 0
+ .../linux-samsung-beyond1lte-downstream/APKBUILD                  | 0
+ .../config-samsung-beyond1lte.aarch64                             | 0
+ .../linux-samsung-beyond1lte-downstream/fix-check-lxdialog.patch  | 0
+ .../linux-samsung-beyond1lte-downstream/remove-header-lkc.patch   | 0
+ .../selinux_include_generated_headers.patch                       | 0
+ 10 files changed, 0 insertions(+), 0 deletions(-)
+ rename device/{archived => downstream}/device-samsung-beyond1lte-downstream/APKBUILD (100%)
+ rename device/{archived => downstream}/device-samsung-beyond1lte-downstream/deviceinfo (100%)
+ rename device/{archived => downstream}/device-samsung-beyond1lte-downstream/initfs-hook.sh (100%)
+ rename device/{archived => downstream}/device-samsung-beyond1lte-downstream/kernel-cmdline.conf (100%)
+ rename device/{archived => downstream}/firmware-samsung-beyond1lte/APKBUILD (100%)
+ rename device/{archived => downstream}/linux-samsung-beyond1lte-downstream/APKBUILD (100%)
+ rename device/{archived => downstream}/linux-samsung-beyond1lte-downstream/config-samsung-beyond1lte.aarch64 (100%)
+ rename device/{archived => downstream}/linux-samsung-beyond1lte-downstream/fix-check-lxdialog.patch (100%)
+ rename device/{archived => downstream}/linux-samsung-beyond1lte-downstream/remove-header-lkc.patch (100%)
+ rename device/{archived => downstream}/linux-samsung-beyond1lte-downstream/selinux_include_generated_headers.patch (100%)
+
+diff --git a/device/archived/device-samsung-beyond1lte-downstream/APKBUILD b/device/downstream/device-samsung-beyond1lte-downstream/APKBUILD
+similarity index 100%
+rename from device/archived/device-samsung-beyond1lte-downstream/APKBUILD
+rename to device/downstream/device-samsung-beyond1lte-downstream/APKBUILD
+diff --git a/device/archived/device-samsung-beyond1lte-downstream/deviceinfo b/device/downstream/device-samsung-beyond1lte-downstream/deviceinfo
+similarity index 100%
+rename from device/archived/device-samsung-beyond1lte-downstream/deviceinfo
+rename to device/downstream/device-samsung-beyond1lte-downstream/deviceinfo
+diff --git a/device/archived/device-samsung-beyond1lte-downstream/initfs-hook.sh b/device/downstream/device-samsung-beyond1lte-downstream/initfs-hook.sh
+similarity index 100%
+rename from device/archived/device-samsung-beyond1lte-downstream/initfs-hook.sh
+rename to device/downstream/device-samsung-beyond1lte-downstream/initfs-hook.sh
+diff --git a/device/archived/device-samsung-beyond1lte-downstream/kernel-cmdline.conf b/device/downstream/device-samsung-beyond1lte-downstream/kernel-cmdline.conf
+similarity index 100%
+rename from device/archived/device-samsung-beyond1lte-downstream/kernel-cmdline.conf
+rename to device/downstream/device-samsung-beyond1lte-downstream/kernel-cmdline.conf
+diff --git a/device/archived/firmware-samsung-beyond1lte/APKBUILD b/device/downstream/firmware-samsung-beyond1lte/APKBUILD
+similarity index 100%
+rename from device/archived/firmware-samsung-beyond1lte/APKBUILD
+rename to device/downstream/firmware-samsung-beyond1lte/APKBUILD
+diff --git a/device/archived/linux-samsung-beyond1lte-downstream/APKBUILD b/device/downstream/linux-samsung-beyond1lte-downstream/APKBUILD
+similarity index 100%
+rename from device/archived/linux-samsung-beyond1lte-downstream/APKBUILD
+rename to device/downstream/linux-samsung-beyond1lte-downstream/APKBUILD
+diff --git a/device/archived/linux-samsung-beyond1lte-downstream/config-samsung-beyond1lte.aarch64 b/device/downstream/linux-samsung-beyond1lte-downstream/config-samsung-beyond1lte.aarch64
+similarity index 100%
+rename from device/archived/linux-samsung-beyond1lte-downstream/config-samsung-beyond1lte.aarch64
+rename to device/downstream/linux-samsung-beyond1lte-downstream/config-samsung-beyond1lte.aarch64
+diff --git a/device/archived/linux-samsung-beyond1lte-downstream/fix-check-lxdialog.patch b/device/downstream/linux-samsung-beyond1lte-downstream/fix-check-lxdialog.patch
+similarity index 100%
+rename from device/archived/linux-samsung-beyond1lte-downstream/fix-check-lxdialog.patch
+rename to device/downstream/linux-samsung-beyond1lte-downstream/fix-check-lxdialog.patch
+diff --git a/device/archived/linux-samsung-beyond1lte-downstream/remove-header-lkc.patch b/device/downstream/linux-samsung-beyond1lte-downstream/remove-header-lkc.patch
+similarity index 100%
+rename from device/archived/linux-samsung-beyond1lte-downstream/remove-header-lkc.patch
+rename to device/downstream/linux-samsung-beyond1lte-downstream/remove-header-lkc.patch
+diff --git a/device/archived/linux-samsung-beyond1lte-downstream/selinux_include_generated_headers.patch b/device/downstream/linux-samsung-beyond1lte-downstream/selinux_include_generated_headers.patch
+similarity index 100%
+rename from device/archived/linux-samsung-beyond1lte-downstream/selinux_include_generated_headers.patch
+rename to device/downstream/linux-samsung-beyond1lte-downstream/selinux_include_generated_headers.patch
+-- 
+2.53.0
+

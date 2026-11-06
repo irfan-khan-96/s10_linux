@@ -1,0 +1,324 @@
+From 059da403802c3692a934ef19e292fd6e7e2a551a Mon Sep 17 00:00:00 2001
+From: khan <khan@localhost>
+Date: Sun, 1 Nov 2026 22:43:04 +0100
+Subject: [PATCH 21/43] fbterm, s10-terminal: resize in place when the keyboard
+ shows or hides
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ device/downstream/s10-terminal/APKBUILD |   8 +-
+ device/downstream/s10-terminal/s10-osk  |  38 ++++---
+ device/downstream/s10-terminal/s10-term |  11 +-
+ main/fbterm/APKBUILD                    |   4 +-
+ main/fbterm/live-resize.patch           | 139 ++++++++++++++++++++++++
+ 5 files changed, 171 insertions(+), 29 deletions(-)
+ create mode 100644 main/fbterm/live-resize.patch
+
+diff --git a/device/downstream/s10-terminal/APKBUILD b/device/downstream/s10-terminal/APKBUILD
+index 025ceedb33..4246de92c2 100644
+--- a/device/downstream/s10-terminal/APKBUILD
++++ b/device/downstream/s10-terminal/APKBUILD
+@@ -2,13 +2,13 @@
+ # setup that turns samsung-beyond1lte-downstream into a pocket terminal.
+ pkgname=s10-terminal
+ pkgver=1
+-pkgrel=1
++pkgrel=2
+ pkgdesc="Galaxy S10 pocket terminal: fbterm + tmux, on-screen keyboard, hardening"
+ url="https://postmarketos.org"
+ arch="aarch64"
+ license="MIT"
+ depends="
+-	fbterm
++	fbterm>=1.7-r2
+ 	font-jetbrains-mono
+ 	iptables
+ 	iptables-legacy
+@@ -65,11 +65,11 @@ package() {
+ }
+ 
+ sha512sums="
+-4c10f19fd209c2942d085e22394b05385d309308d87a20af063c4a740fd56f8b4e2df93b5aad1adb5eb4a6cd8f5e8fb89cd3a45a743fc4841fe3bbb84cd31aa2  s10-osk
++43fbf0749d3c12ee3e6506847cd4de04868d6cfad5d49da96fad5cbbd686c816eb762df10115c0826fe2887a63685a9c3a4ae30ae8056e4cce7b6e9b5254dc1a  s10-osk
+ d3f73cfc060ad3222521699ba980d4ade218bf2ee8b9681bd6abebd8300602bca3283eb0cabce74792355741d8812f2f1753e16b540b229812a4c404a95cec0a  s10-idle-blank
+ f5b670528587d518a367b66ae15fd9b5583b7ad666e03051523cf56a1b007469fc5fad535f4d22b12106042e93352b07594ec6dbc4da50766b3757d6e103f12b  s10-touch-absfix
+ 9daf9ac5a89cd6d83560f26e35b95253ea71b20eeb3556ebdf31e2b7e4a66dfa4845c0f73c43601ac63f2e56613f17777691135d564f4924f23b9a3865838e6f  s10-osk-start
+-cf5d06bf180f995b3477edce2da0abb038f5fb4ae269946b54a5b1c832d1060761fd0a23e80a138ee56dab827c4c8689b47ae8ac13e7d072e60054dc6c629a23  s10-term
++c8e35175ea573529bfedaf3e0ba68ce9cb1135288b659d4e5b244a153213d24671f6ae2340f109b1576b09223bc38bcf7b7be4c10979dfd948c4b8b0f56c2e9b  s10-term
+ 57a90c056354401584f280ba2e94483dd08dc89fbbd643626f04a1d121ddd0c6a180efb477d863ecd4b2da95325ca8576d355c4467a774c39a08f594978e2675  fbtermrc
+ 53bc339ea8e0fbee4d1c4c2f430b329260939f47118eafc4f8ad415d17ca1f523b053b38057e7ee6a880b3dd8f720d38da0b45730f2fd2f177a49279b4fafce3  tmux.conf
+ 2925ca72c125e154331429da14c4b2d515c0cb0b023cae521326f457d098a35ff58c78b5a32e2d950eacd2cb97e086c914e20067577232243c05baf72504df78  10-firewall.start
+diff --git a/device/downstream/s10-terminal/s10-osk b/device/downstream/s10-terminal/s10-osk
+index b572326aad..9e6655cb5f 100755
+--- a/device/downstream/s10-terminal/s10-osk
++++ b/device/downstream/s10-terminal/s10-osk
+@@ -151,9 +151,17 @@ class Keyboard:
+         except OSError:
+             pass
+ 
+-HIDDEN = "/run/s10-osk-hidden"              # read by s10-term: full-height terminal
++RESERVE = "/run/s10-osk-reserve"     # pixels fbterm leaves free (FBTERM_RESERVE_FILE)
++SHOWN, HIDDEN_PX = KB_H, 1            # 1, not 0: fbterm keeps scrolling by redraw
+ KEY_VOLUMEDOWN = 114
+ 
++def reserved():
++    try:
++        with open(RESERVE) as f:
++            return int(f.read())
++    except (OSError, ValueError):
++        return SHOWN
++
+ def hardware_keyboard():
+     """True if a USB keyboard (with letter keys) is plugged in."""
+     for dev in glob.glob("/sys/class/input/event*/device"):
+@@ -170,11 +178,11 @@ def hardware_keyboard():
+ 
+ class Visibility:
+     """Hide the keyboard while a USB keyboard is attached; Volume Down toggles.
+-    Changing it restarts fbterm (inittab respawns s10-term, tmux reattaches)."""
++    fbterm resizes in place on SIGWINCH after reading RESERVE."""
+     def __init__(self, kb):
+         self.kb, self.manual, self.next_scan = kb, None, 0
+         self.usb = hardware_keyboard()
+-        self.visible = not os.path.exists(HIDDEN)      # what the running terminal uses
++        self.visible = reserved() != HIDDEN_PX          # what the running terminal uses
+         self.keys_fd = None
+         for dev in glob.glob("/sys/class/input/event*"):
+             try:
+@@ -182,9 +190,10 @@ class Visibility:
+                     self.keys_fd = os.open("/dev/input/" + os.path.basename(dev), os.O_RDONLY)
+             except OSError:
+                 pass
+-        self.apply(not self.usb, restart_terminal=False)
+-        if not self.visible:
+-            self.kb.fb[TOP * LL:(TOP + KB_H) * LL] = bytes(KB_H * LL)
++        if self.visible == self.usb:
++            self.apply(not self.usb)
++        elif not self.visible:
++            self.kb.fb[TOP * LL:(TOP + KB_H) * LL] = bytes(KB_H * LL)   # Keyboard() drew it
+ 
+     def poll(self, now):
+         if now < self.next_scan:
+@@ -203,20 +212,15 @@ class Visibility:
+                 self.manual = not self.visible
+                 self.apply(self.manual)
+ 
+-    def apply(self, visible, restart_terminal=True):
+-        if visible == self.visible and not restart_terminal:
+-            return
+-        changed = visible != self.visible
++    def apply(self, visible):
+         self.visible = visible
+-        if visible:
+-            if os.path.exists(HIDDEN): os.remove(HIDDEN)
+-        else:
+-            open(HIDDEN, "w").close()
++        with open(RESERVE, "w") as f:
++            f.write(str(SHOWN if visible else HIDDEN_PX))
++        if not visible:
+             self.kb.fb[TOP * LL:(TOP + KB_H) * LL] = bytes(KB_H * LL)   # clear the strip
+-        if changed or restart_terminal:
+-            subprocess.run(["pkill", "-x", "fbterm"])     # inittab restarts s10-term
++        subprocess.run(["pkill", "-WINCH", "-x", "fbterm"])  # fbterm re-reads RESERVE
+         if visible:
+-            time.sleep(1.2)                                # let fbterm come back, then draw
++            time.sleep(0.05)                               # let fbterm stop drawing there
+             self.kb.draw()
+ 
+ def screen_waking(now):
+diff --git a/device/downstream/s10-terminal/s10-term b/device/downstream/s10-terminal/s10-term
+index c89ce1fa63..c3e0009ce7 100644
+--- a/device/downstream/s10-terminal/s10-term
++++ b/device/downstream/s10-terminal/s10-term
+@@ -1,12 +1,9 @@
+ #!/bin/sh
+ # Terminal session for tty1: fbterm + tmux above the on-screen keyboard.
++# s10-osk writes the keyboard height (1 while hidden) to the reserve file and
++# sends fbterm SIGWINCH, so fbterm resizes without restarting.
+ [ -f "$HOME/.fbtermrc" ] || cp /usr/share/s10-terminal/fbtermrc "$HOME/.fbtermrc"
+ export TERM=fbterm
+-if [ -e /run/s10-osk-hidden ]; then
+-	# keyboard hidden (USB keyboard or Volume Down): use the full height.
+-	# 1 px instead of 0 keeps fbterm scrolling by redraw, never by panning.
+-	export FBTERM_RESERVE_BOTTOM=1
+-else
+-	export FBTERM_RESERVE_BOTTOM=1100   # height of s10-osk
+-fi
++export FBTERM_RESERVE_FILE=/run/s10-osk-reserve
++export FBTERM_RESERVE_BOTTOM="$(cat "$FBTERM_RESERVE_FILE" 2>/dev/null || echo 1100)"
+ exec fbterm -- tmux new -A -s main
+diff --git a/main/fbterm/APKBUILD b/main/fbterm/APKBUILD
+index 6d490ded98..f90395091a 100644
+--- a/main/fbterm/APKBUILD
++++ b/main/fbterm/APKBUILD
+@@ -1,7 +1,7 @@
+ # Local package for the S10 fork: fbterm with Debian's patches
+ pkgname=fbterm
+ pkgver=1.7
+-pkgrel=1
++pkgrel=2
+ _debrel=5
+ pkgdesc="Fast framebuffer terminal emulator with TrueType fonts"
+ url="https://salsa.debian.org/debian/fbterm"
+@@ -14,6 +14,7 @@ source="https://deb.debian.org/debian/pool/main/f/fbterm/fbterm_$pkgver.orig.tar
+ 	https://deb.debian.org/debian/pool/main/f/fbterm/fbterm_$pkgver-$_debrel.debian.tar.xz
+ 	musl-compat.patch
+ 	reserve-bottom.patch
++	live-resize.patch
+ 	"
+ builddir="$srcdir/fbterm-$pkgver"
+ 
+@@ -45,4 +46,5 @@ sha512sums="
+ 4a8d2f999d95e334c5e6ac081e538d414f6285656db622bd33572eec46e15d94192bbf336c48d2172007f5b8e73b056f9571ae018d17d064523cf8e819623b2b  fbterm_1.7-5.debian.tar.xz
+ a9f23806626bd2accf4b50e759f9cd6b4076353938c74ba6d1f461465754cebd47b7923e7c183ecea164fb8ae573a4f5e06c75be5222ec58176912b2e298c6fd  musl-compat.patch
+ 766fa8a23d416f3f79da8ce947e89ed2ae17c823b618ae90f47231046f156053bc905ce2724247d3223ab03c96ec7aa12a83c54a4d3866d441336dab1622ad98  reserve-bottom.patch
++3045a74b989a1a4434e44a6469e47f6c47076627bc027804814fcd6dd47a7635c73e72ceb92610f0f937e3b0eaa5040c4f97dfc98f7e3264dfbf7482ccb7a445  live-resize.patch
+ "
+diff --git a/main/fbterm/live-resize.patch b/main/fbterm/live-resize.patch
+new file mode 100644
+index 0000000000..d30c1a7dae
+--- /dev/null
++++ b/main/fbterm/live-resize.patch
+@@ -0,0 +1,139 @@
++diff --git a/src/fbdev.cpp b/src/fbdev.cpp
++index 0e402ca..ac7712b 100644
++--- a/src/fbdev.cpp
+++++ b/src/fbdev.cpp
++@@ -100,6 +100,7 @@ FbDev::FbDev()
++ 	const char *reserve = getenv("FBTERM_RESERVE_BOTTOM");
++ 	u32 reserved = reserve ? strtoul(reserve, 0, 10) : 0;
++ 	if (reserved >= mHeight) reserved = 0;
+++	mFullHeight = mHeight;
++ 	mHeight -= reserved;
++ 	mBitsPerPixel = vinfo.bits_per_pixel;
++ 	mBytesPerLine = finfo.line_length;
++diff --git a/src/fbshellman.cpp b/src/fbshellman.cpp
++index 6629234..a217fb1 100644
++--- a/src/fbshellman.cpp
+++++ b/src/fbshellman.cpp
++@@ -172,3 +172,14 @@ void FbShellManager::childProcessExited(s32 pid)
++ 		if (mShellList[i] && mShellList[i]->childProcessExited(pid)) break;
++ 	}
++ }
+++
+++void FbShellManager::resize()
+++{
+++	for (u32 i = 0; i < NR_SHELLS; i++) {
+++		if (mShellList[i]) mShellList[i]->resize(screen->cols(), screen->rows());
+++	}
+++
+++	if (mVcCurrent) {
+++		redraw(0, 0, screen->cols(), screen->rows());
+++	}
+++}
++diff --git a/src/fbshellman.h b/src/fbshellman.h
++index 5f047a6..7828ebf 100644
++--- a/src/fbshellman.h
+++++ b/src/fbshellman.h
++@@ -43,6 +43,7 @@ public:
++ 	void historyScroll(bool down);
++ 	void redraw(u16 x, u16 y, u16 w, u16 h);
++ 	void switchVc(bool enter);
+++	void resize();
++ 	void childProcessExited(s32 pid);
++ 
++ private:
++diff --git a/src/fbterm.cpp b/src/fbterm.cpp
++index 9d538cb..6c2c603 100644
++--- a/src/fbterm.cpp
+++++ b/src/fbterm.cpp
++@@ -134,6 +134,7 @@ void FbTerm::init()
++ 	sigaddset(&sigmask, SIGALRM);
++ 	sigaddset(&sigmask, SIGTERM);
++ 	sigaddset(&sigmask, SIGHUP);
+++	sigaddset(&sigmask, SIGWINCH);
++ 
++ 	sigprocmask(SIG_BLOCK, &sigmask, &oldSigmask);
++ 	new SignalIo(sigmask);
++@@ -146,6 +147,7 @@ void FbTerm::init()
++ 	signal(SIGALRM, sh);
++ 	signal(SIGTERM, sh);
++ 	signal(SIGHUP, sh);
+++	signal(SIGWINCH, sh);
++ #endif
++ 	signal(SIGPIPE, SIG_IGN);
++ 
++@@ -211,6 +213,20 @@ void FbTerm::processSignal(u32 signo)
++ 		FbShellManager::instance()->switchVc(true);
++ 		break;
++ 
+++	case SIGWINCH: {
+++		/* FBTERM_RESERVE_FILE: re-read the reserved bottom strip (pixels) */
+++		const char *path = getenv("FBTERM_RESERVE_FILE");
+++		FILE *f = path ? fopen(path, "r") : 0;
+++		if (f) {
+++			unsigned long reserved;
+++			if (fscanf(f, "%lu", &reserved) == 1 && Screen::instance()->setReserved(reserved)) {
+++				FbShellManager::instance()->resize();
+++			}
+++			fclose(f);
+++		}
+++		break;
+++	}
+++
++ 	case SIGCHLD:
++ 		if (mRun) {
++ 			s32 pid = waitpid(WAIT_ANY, 0, WNOHANG);
++diff --git a/src/screen.cpp b/src/screen.cpp
++index 4da2453..a6efc67 100644
++--- a/src/screen.cpp
+++++ b/src/screen.cpp
++@@ -92,7 +92,7 @@ Screen *Screen::createInstance()
++ 
++ Screen::Screen()
++ {
++-	mWidth = mHeight = 0;
+++	mWidth = mHeight = mFullHeight = 0;
++ 	mCols = mRows = 0;
++ 	mBitsPerPixel = mBytesPerLine = 0;
++ 
++@@ -394,3 +394,22 @@ void Screen::rotatePoint(u32 W, u32 H, u32 &x, u32 &y)
++ 		break;
++ 	}
++ }
+++
+++/*
+++ * Change the strip left free at the bottom (FBTERM_RESERVE_BOTTOM) while
+++ * running. Only without rotation and with redraw scrolling, which is what a
+++ * reserved strip uses. Returns true if the number of rows may have changed.
+++ */
+++bool Screen::setReserved(u32 reserved)
+++{
+++	if (!mFullHeight || mRotateType != Rotate0 || mScrollType != Redraw) return false;
+++	if (reserved >= mFullHeight) reserved = 0;
+++
+++	u32 height = mFullHeight - reserved;
+++	if (height == mHeight || height < FH(1)) return false;
+++
+++	mHeight = height;
+++	mRows = mHeight / FH(1);
+++	fillRect(0, FH(mRows), mWidth, mHeight - FH(mRows), 0);
+++	return true;
+++}
++diff --git a/src/screen.h b/src/screen.h
++index 136d1e2..f011861 100644
++--- a/src/screen.h
+++++ b/src/screen.h
++@@ -52,12 +52,13 @@ public :
++ 	void setPalette(const Color *palette);
++ 	
++ 	void enableScroll(bool enable) { mScrollEnable = enable; }
+++	bool setReserved(u32 reserved);
++ 
++ 	void showInfo(bool verbose);
++ 	virtual void switchVc(bool enter);
++ 
++ protected:
++-	u32 mWidth, mHeight;
+++	u32 mWidth, mHeight, mFullHeight;
++ 	u16 mCols, mRows;
++ 	u32 mBitsPerPixel, mBytesPerLine;
++ 
+-- 
+2.53.0
+

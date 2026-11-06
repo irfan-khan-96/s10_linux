@@ -1,0 +1,75 @@
+From 6f0438200fa93b74b960b58c0d79c3726117e983 Mon Sep 17 00:00:00 2001
+From: khan <khan@localhost>
+Date: Fri, 6 Nov 2026 23:16:42 +0100
+Subject: [PATCH 42/43] s10-terminal: clean poweroff at 3% battery; power log
+ current in mA
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ device/downstream/s10-terminal/APKBUILD       |  4 ++--
+ device/downstream/s10-terminal/s10-idle-blank | 14 +++++++++++---
+ 2 files changed, 13 insertions(+), 5 deletions(-)
+
+diff --git a/device/downstream/s10-terminal/APKBUILD b/device/downstream/s10-terminal/APKBUILD
+index 37ffc45718..0bc8813c35 100644
+--- a/device/downstream/s10-terminal/APKBUILD
++++ b/device/downstream/s10-terminal/APKBUILD
+@@ -2,7 +2,7 @@
+ # setup that turns samsung-beyond1lte-downstream into a pocket terminal.
+ pkgname=s10-terminal
+ pkgver=1
+-pkgrel=17
++pkgrel=18
+ pkgdesc="Galaxy S10 pocket terminal: fbterm + tmux, on-screen keyboard, hardening"
+ url="https://postmarketos.org"
+ arch="aarch64"
+@@ -82,7 +82,7 @@ sha512sums="
+ 39bf55c1e453af330e2b67387113c32257da794aa9208ef2d8dcb5311a1c7dfc086387ad67bdb3d1076a9613abedf53450e515fbf1c6f6ed8e6da61b69fbd7b6  s10-status
+ 2ad64dddbc4290cb8b1fe600ae686891f25ed5c589263c40027fadb460eba5755fd48de5ed57cf09f02d51dc0f8d442a6915ca77386422f4c03dec2a3f45fd5f  s10-splash
+ 5fe4dd6a2064be409b02483188d9beebd4ab3de1263a62ad2453dfa7d33dcf2494f2ff81860a8443a5db44e97a454f17f0e8b55be921ed85a28e3689c3a0ae9d  s10-splash.initd
+-71e946e6a69d448e1f9b8982dc7f1c114730d98ba7272dd378704445d0532f8911232b2e24ab4b56485c9927b55e9e6de590e856a06b124ba70222a8f46201a3  s10-idle-blank
++f8ed8cadadc5c3186ca135193b53d1dd70a272636d66d730bc1c8c93b9fcd8ad33fa09ac7406068d7e3bb1c5be1bf5fcc2798af3a254ca5a51baea7270490ace  s10-idle-blank
+ f5b670528587d518a367b66ae15fd9b5583b7ad666e03051523cf56a1b007469fc5fad535f4d22b12106042e93352b07594ec6dbc4da50766b3757d6e103f12b  s10-touch-absfix
+ 9daf9ac5a89cd6d83560f26e35b95253ea71b20eeb3556ebdf31e2b7e4a66dfa4845c0f73c43601ac63f2e56613f17777691135d564f4924f23b9a3865838e6f  s10-osk-start
+ 00e1c13c89a90739e66e37368cfc7fb9fad81b60ccedb84c2826948f77924aee8907aa227b0e845f09e2ca5331625d08769c0e63beae7bbae8360ce319808e2f  s10-term
+diff --git a/device/downstream/s10-terminal/s10-idle-blank b/device/downstream/s10-terminal/s10-idle-blank
+index d5aaef8b64..485bb985e5 100644
+--- a/device/downstream/s10-terminal/s10-idle-blank
++++ b/device/downstream/s10-terminal/s10-idle-blank
+@@ -17,6 +17,7 @@ BLANK = "/sys/class/graphics/fb0/blank"
+ BACKLIGHT = "/sys/class/backlight/panel/brightness"
+ BATTERY = "/sys/class/power_supply/battery"
+ POWER_LOG = "/var/log/s10-power.log"
++LOW_BATTERY = 3                                # % on battery: clean poweroff
+ BIG_CORES = (4, 5, 6, 7)                       # mid (A75) and big (M4) clusters
+ # Frozen while the screen is off. Names as in /proc/<pid>/comm, which the kernel cuts
+ # to 15 characters. They are frozen with the cgroup-v1 freezer, not SIGSTOP: tmux sends
+@@ -101,8 +102,9 @@ def set_blank(off, cycle=True):
+         f.write("1" if off else "0")
+ 
+ def log_power():
++    # this fuel gauge reports current_avg in mA (negative while discharging)
+     line = (f"{time.strftime('%Y-%m-%d %H:%M')} {read(BATTERY + '/capacity', '?')}% "
+-            f"{read(BATTERY + '/status', '?')} avg {int(read(BATTERY + '/current_avg', '0')) // 1000} mA\n")
++            f"{read(BATTERY + '/status', '?')} avg {read(BATTERY + '/current_avg', '?')} mA\n")
+     try:
+         lines = open(POWER_LOG).readlines()[-2000:] if os.path.exists(POWER_LOG) else []
+         with open(POWER_LOG, "w") as f:
+@@ -155,6 +157,12 @@ while True:
+         dimmed = backlight()
+         if dimmed is not None:
+             backlight(max(dimmed // 5, 200))
+-    if blanked and now >= next_log:
+-        log_power()
++    if now >= next_log:
++        if blanked:
++            log_power()
++        # flat battery: shut down cleanly instead of losing power mid-write
++        cap = read(BATTERY + "/capacity", "100")
++        if read(BATTERY + "/status") == "Discharging" and cap.isdigit() and int(cap) <= LOW_BATTERY:
++            log_power()
++            run("poweroff")
+         next_log = now + 300
+-- 
+2.53.0
+

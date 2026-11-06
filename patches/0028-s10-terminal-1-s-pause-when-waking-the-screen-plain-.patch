@@ -1,0 +1,72 @@
+From 3206236c5a03b9b591a3fc7f2d89439370223aa2 Mon Sep 17 00:00:00 2001
+From: khan <khan@localhost>
+Date: Sun, 1 Nov 2026 23:59:41 +0100
+Subject: [PATCH 28/43] s10-terminal: 1 s pause when waking the screen, plain
+ unblank at startup
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ device/downstream/s10-terminal/APKBUILD       |  4 ++--
+ device/downstream/s10-terminal/s10-idle-blank | 13 ++++++++-----
+ 2 files changed, 10 insertions(+), 7 deletions(-)
+
+diff --git a/device/downstream/s10-terminal/APKBUILD b/device/downstream/s10-terminal/APKBUILD
+index 84a9ca1afb..4acffe70f5 100644
+--- a/device/downstream/s10-terminal/APKBUILD
++++ b/device/downstream/s10-terminal/APKBUILD
+@@ -2,7 +2,7 @@
+ # setup that turns samsung-beyond1lte-downstream into a pocket terminal.
+ pkgname=s10-terminal
+ pkgver=1
+-pkgrel=5
++pkgrel=6
+ pkgdesc="Galaxy S10 pocket terminal: fbterm + tmux, on-screen keyboard, hardening"
+ url="https://postmarketos.org"
+ arch="aarch64"
+@@ -69,7 +69,7 @@ package() {
+ sha512sums="
+ 43fbf0749d3c12ee3e6506847cd4de04868d6cfad5d49da96fad5cbbd686c816eb762df10115c0826fe2887a63685a9c3a4ae30ae8056e4cce7b6e9b5254dc1a  s10-osk
+ 2a4052a8d61561ce6b0560d6f091d4f9a3cb4f5d9afe174e95f6cece873f5cfdd750a8d475af3a5b7953ac64150316aa2c04853f533cf8b18b4c8205f7c05b81  s10-menu
+-ac3527d5e459a99850e1d8631e01e3b20375a83a5e6f4eb8eb0b6f9e3f3cf2c04f5fca1f73da8fa81065338e659e6b895495c4dc0acb2a13c7daa9d9e776e194  s10-idle-blank
++aa247f00557152f297939fb44ff4d9a7c913e5471b0711f7fbd076a496e6f42beba3be54befa841e59a5de56d7cd9a9a70b2f9a0a93c75707ad459d5a2aa405c  s10-idle-blank
+ f5b670528587d518a367b66ae15fd9b5583b7ad666e03051523cf56a1b007469fc5fad535f4d22b12106042e93352b07594ec6dbc4da50766b3757d6e103f12b  s10-touch-absfix
+ 9daf9ac5a89cd6d83560f26e35b95253ea71b20eeb3556ebdf31e2b7e4a66dfa4845c0f73c43601ac63f2e56613f17777691135d564f4924f23b9a3865838e6f  s10-osk-start
+ fe822d5344de90e8327f4828afe1be112fd1392306a2b2907e125bf5163d161e95e91b5502d710f3cb933ca2a79a09bd3cdb2667e95caeb316becbabc312a55c  s10-term
+diff --git a/device/downstream/s10-terminal/s10-idle-blank b/device/downstream/s10-terminal/s10-idle-blank
+index def7772bb3..4854a96e5e 100755
+--- a/device/downstream/s10-terminal/s10-idle-blank
++++ b/device/downstream/s10-terminal/s10-idle-blank
+@@ -12,14 +12,17 @@ def write_blank(value):
+     with open(BLANK, "w") as f:
+         f.write(value)
+ 
+-def set_blank(off):
++def set_blank(off, cycle=True):
+     if off:
+         write_blank("1")
+-    else:
++    elif cycle:
+         # A plain unblank after a long blank can leave the panel dark (the driver
+-        # accepts it but DSIM stays off); off, a short pause, then on wakes it.
++        # accepts it but DSIM stays off); off, 1 s for the panel to finish powering
++        # down (0.3 s was too short), then on wakes it.
+         write_blank("1")
+-        time.sleep(0.3)
++        time.sleep(1.0)
++        write_blank("0")
++    else:
+         write_blank("0")
+     with open(STATE, "w") as f:
+         f.write("1" if off else "0")
+@@ -33,7 +36,7 @@ def open_inputs(fds):
+                 pass
+ 
+ fds, blanked, last = {}, False, time.monotonic()
+-set_blank(False)
++set_blank(False, cycle=False)
+ while True:
+     open_inputs(fds)  # pick up hot-plugged keyboards
+     ready, _, _ = select.select(list(fds.values()), [], [], 5)
+-- 
+2.53.0
+

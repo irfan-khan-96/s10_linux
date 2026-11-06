@@ -1,0 +1,70 @@
+From b01a2c456108f32064bf5b6b43b07273f952f0b2 Mon Sep 17 00:00:00 2001
+From: khan <khan@localhost>
+Date: Sun, 1 Nov 2026 22:54:42 +0100
+Subject: [PATCH 23/43] fbterm: include stdlib.h for getenv in live-resize
+ patch
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ main/fbterm/APKBUILD          |  2 +-
+ main/fbterm/live-resize.patch | 17 +++++++++++++----
+ 2 files changed, 14 insertions(+), 5 deletions(-)
+
+diff --git a/main/fbterm/APKBUILD b/main/fbterm/APKBUILD
+index f90395091a..af16beecde 100644
+--- a/main/fbterm/APKBUILD
++++ b/main/fbterm/APKBUILD
+@@ -46,5 +46,5 @@ sha512sums="
+ 4a8d2f999d95e334c5e6ac081e538d414f6285656db622bd33572eec46e15d94192bbf336c48d2172007f5b8e73b056f9571ae018d17d064523cf8e819623b2b  fbterm_1.7-5.debian.tar.xz
+ a9f23806626bd2accf4b50e759f9cd6b4076353938c74ba6d1f461465754cebd47b7923e7c183ecea164fb8ae573a4f5e06c75be5222ec58176912b2e298c6fd  musl-compat.patch
+ 766fa8a23d416f3f79da8ce947e89ed2ae17c823b618ae90f47231046f156053bc905ce2724247d3223ab03c96ec7aa12a83c54a4d3866d441336dab1622ad98  reserve-bottom.patch
+-3045a74b989a1a4434e44a6469e47f6c47076627bc027804814fcd6dd47a7635c73e72ceb92610f0f937e3b0eaa5040c4f97dfc98f7e3264dfbf7482ccb7a445  live-resize.patch
++d7fbfa9f42972bd03aba3e51b8b2c6cdc7c46d4597f1972cf05bdfe1a2a4b9e4645eb07bb3a53f4122929a08f0bbf7db6d2ddfe079b564c3d211c90356f6427e  live-resize.patch
+ "
+diff --git a/main/fbterm/live-resize.patch b/main/fbterm/live-resize.patch
+index d30c1a7dae..c7098fe77b 100644
+--- a/main/fbterm/live-resize.patch
++++ b/main/fbterm/live-resize.patch
+@@ -42,10 +42,19 @@ index 5f047a6..7828ebf 100644
+  
+  private:
+ diff --git a/src/fbterm.cpp b/src/fbterm.cpp
+-index 9d538cb..6c2c603 100644
++index 9d538cb..e8f6d74 100644
+ --- a/src/fbterm.cpp
+ +++ b/src/fbterm.cpp
+-@@ -134,6 +134,7 @@ void FbTerm::init()
++@@ -21,6 +21,8 @@
++ #include <unistd.h>
++ #include <stdio.h>
++ #include <signal.h>
+++#include <stdio.h>
+++#include <stdlib.h>
++ #include <sys/ioctl.h>
++ #include <sys/stat.h>
++ #include <sys/wait.h>
++@@ -134,6 +136,7 @@ void FbTerm::init()
+  	sigaddset(&sigmask, SIGALRM);
+  	sigaddset(&sigmask, SIGTERM);
+  	sigaddset(&sigmask, SIGHUP);
+@@ -53,7 +62,7 @@ index 9d538cb..6c2c603 100644
+  
+  	sigprocmask(SIG_BLOCK, &sigmask, &oldSigmask);
+  	new SignalIo(sigmask);
+-@@ -146,6 +147,7 @@ void FbTerm::init()
++@@ -146,6 +149,7 @@ void FbTerm::init()
+  	signal(SIGALRM, sh);
+  	signal(SIGTERM, sh);
+  	signal(SIGHUP, sh);
+@@ -61,7 +70,7 @@ index 9d538cb..6c2c603 100644
+  #endif
+  	signal(SIGPIPE, SIG_IGN);
+  
+-@@ -211,6 +213,20 @@ void FbTerm::processSignal(u32 signo)
++@@ -211,6 +215,20 @@ void FbTerm::processSignal(u32 signo)
+  		FbShellManager::instance()->switchVc(true);
+  		break;
+  
+-- 
+2.53.0
+

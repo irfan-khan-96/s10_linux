@@ -1,0 +1,50 @@
+From b7c0b16e2da1d6a76fe4717794ff9e33dd5eab4d Mon Sep 17 00:00:00 2001
+From: khan <khan@localhost>
+Date: Sat, 31 Oct 2026 09:42:17 +0100
+Subject: [PATCH 05/43] device-samsung-beyond1lte-downstream: use 512-byte
+ rootfs sectors (4.14 loop partscan)
+
+---
+ .../downstream/device-samsung-beyond1lte-downstream/APKBUILD  | 4 ++--
+ .../device-samsung-beyond1lte-downstream/deviceinfo           | 3 ++-
+ 2 files changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/device/downstream/device-samsung-beyond1lte-downstream/APKBUILD b/device/downstream/device-samsung-beyond1lte-downstream/APKBUILD
+index ae12939ca5..14950a6898 100644
+--- a/device/downstream/device-samsung-beyond1lte-downstream/APKBUILD
++++ b/device/downstream/device-samsung-beyond1lte-downstream/APKBUILD
+@@ -4,7 +4,7 @@ maintainer="chiffa <chiffathefoxx@gmail.com>"
+ pkgname=device-samsung-beyond1lte-downstream
+ pkgdesc="Samsung Galaxy S10 (Downstream)"
+ pkgver=7
+-pkgrel=1
++pkgrel=2
+ url="https://postmarketos.org"
+ license="MIT"
+ arch="aarch64"
+@@ -28,7 +28,7 @@ package() {
+ }
+ 
+ sha512sums="
+-05b45c31a8a093c80340633cc969dee4660bbb6dfc6218865214522f88c92e51cae328e5d53aaecf04d70f4f88bf1df3b9949de865fed5a5dc1ca4b90c54a4cc  deviceinfo
++a122d5290a8a365d832cd13b152f44fe6621a2b97beddf825972c29dde8d1fc10ffdd95de29b9d9a43f02b277b8b33586cd612bae2b5ba3fd023b6ce941ba97f  deviceinfo
+ cb0731b5e71b427024bb47cd70aa48d3be409a89aa476f3fd4dea8e5b42ef87371a65bbe836bca7da04c0384178ad293b44da8a88557ad04fc57857bef502050  kernel-cmdline.conf
+ 03deb65563f4b4421491643854927e88b2d5880b8b19ee6baa4d3fa1ec3f7d7a1c2977fd2c3c41270254efea6fa0c5fdae0a382e7c427d5a3bf6fad34c25375e  initfs-hook.sh
+ "
+diff --git a/device/downstream/device-samsung-beyond1lte-downstream/deviceinfo b/device/downstream/device-samsung-beyond1lte-downstream/deviceinfo
+index 42890b1812..a7c851d4dc 100644
+--- a/device/downstream/device-samsung-beyond1lte-downstream/deviceinfo
++++ b/device/downstream/device-samsung-beyond1lte-downstream/deviceinfo
+@@ -30,7 +30,8 @@ deviceinfo_flash_heimdall_partition_kernel="BOOT"
+ 
+ 
+ deviceinfo_no_framebuffer="true"
+-deviceinfo_rootfs_image_sector_size="4096"
++# 512-byte sectors: on 4.14, losetup -P scans the partition table before
++# --sector-size is applied, so 4096-sector images show no subpartitions
+ deviceinfo_bootimg_append_seandroidenforce="true"
+ deviceinfo_create_initfs_extra="true"
+ # 4.14 downstream kernel has no zstd initramfs support (only gzip/lz4)
+-- 
+2.53.0
+

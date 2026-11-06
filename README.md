@@ -6,7 +6,7 @@ Wi-Fi, key-only SSH, firewall. Built with AI assistance; not affiliated with or 
 
 | Path | Contents |
 | --- | --- |
-| `patches/` | The fork as patch files (`git am` on pmaports `main`) |
+| `patches/` | The fork as patch files (`git am` on the upstream pmaports commit in `patches/BASE`) |
 | `s10-downstream.bundle` | The same commits as a git bundle |
 | `*.apk` | Built packages (fbterm, s10-terminal) |
 | `phone-config/` | Snapshot of every custom file from the phone, by path |
