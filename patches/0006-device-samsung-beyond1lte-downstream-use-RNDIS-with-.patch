@@ -1,7 +1,7 @@
 From 0dcfa7de82c45b7ffb3f2b7eb3201692b42ab937 Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Sat, 31 Oct 2026 09:47:16 +0100
-Subject: [PATCH 06/41] device-samsung-beyond1lte-downstream: use RNDIS with
+Subject: [PATCH 06/43] device-samsung-beyond1lte-downstream: use RNDIS with
  Samsung USB IDs
 
 ---

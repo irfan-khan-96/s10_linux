@@ -1,7 +1,7 @@
 From b8ea9cee80af93b2180ed921aef38712991c32c0 Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Mon, 2 Nov 2026 02:11:18 +0100
-Subject: [PATCH 38/41] s10-terminal: type on touch (hold/flick for symbols),
+Subject: [PATCH 38/43] s10-terminal: type on touch (hold/flick for symbols),
  bigger keys, lighter non-blocking haptics, softer amber, size 64, filled keys
  with symbols
 

@@ -1,6 +1,7 @@
 #!/usr/bin/python3
-# Turn the S10 panel off after IDLE seconds without input, and back on at the
-# first key press, touch or button (USB keyboards may be plugged in at any time).
+# Turn the S10 panel off after IDLE seconds without input, or at once with the power
+# button, and back on at the first key press, touch or button (USB keyboards may be
+# plugged in at any time).
 # DIM seconds before that the backlight drops to a fifth, so the screen fades
 # instead of cutting out; any input restores it.
 #
@@ -9,7 +10,7 @@
 # go offline, Wi-Fi power saving is on, the touch booster and tmux status polling
 # are off. Everything is restored on wake. Battery readings are logged every 5 min
 # while off to /var/log/s10-power.log, to check the standby drain.
-import glob, os, select, subprocess, time
+import glob, os, select, struct, subprocess, time
 
 IDLE = int(os.environ.get("S10_IDLE_SECONDS", "120"))
 DIM = 10
@@ -17,6 +18,8 @@ BLANK = "/sys/class/graphics/fb0/blank"
 BACKLIGHT = "/sys/class/backlight/panel/brightness"
 BATTERY = "/sys/class/power_supply/battery"
 POWER_LOG = "/var/log/s10-power.log"
+LOW_BATTERY = 3                                # % on battery: clean poweroff
+EV_KEY, EV_REL, EV_ABS, KEY_POWER = 1, 2, 3, 116
 BIG_CORES = (4, 5, 6, 7)                       # mid (A75) and big (M4) clusters
 # Frozen while the screen is off. Names as in /proc/<pid>/comm, which the kernel cuts
 # to 15 characters. They are frozen with the cgroup-v1 freezer, not SIGSTOP: tmux sends
@@ -101,8 +104,9 @@ def set_blank(off, cycle=True):
         f.write("1" if off else "0")
 
 def log_power():
+    # this fuel gauge reports current_avg in mA (negative while discharging)
     line = (f"{time.strftime('%Y-%m-%d %H:%M')} {read(BATTERY + '/capacity', '?')}% "
-            f"{read(BATTERY + '/status', '?')} avg {int(read(BATTERY + '/current_avg', '0')) // 1000} mA\n")
+            f"{read(BATTERY + '/status', '?')} avg {read(BATTERY + '/current_avg', '?')} mA\n")
     try:
         lines = open(POWER_LOG).readlines()[-2000:] if os.path.exists(POWER_LOG) else []
         with open(POWER_LOG, "w") as f:
@@ -126,18 +130,31 @@ while True:
     open_inputs(fds)  # pick up hot-plugged keyboards
     # screen off: wake rarely (input still wakes select at once)
     ready, _, _ = select.select(list(fds.values()), [], [], 60 if blanked else 1)
-    activity = False
+    activity = power = False
     for fd in ready:
         try:
-            if os.read(fd, 4096):
-                activity = True
+            data = os.read(fd, 4096)
         except OSError:  # device unplugged
             for path, f in list(fds.items()):
                 if f == fd:
                     os.close(f)
                     del fds[path]
+            continue
+        for i in range(0, len(data) - 23, 24):
+            _, _, etype, code, value = struct.unpack_from("qqHHi", data, i)
+            if etype == EV_KEY and code == KEY_POWER:
+                power = power or value == 1    # press only; its release is not activity
+            elif etype in (EV_KEY, EV_REL, EV_ABS):
+                activity = True
     now = time.monotonic()
-    if activity:
+    if power and blanked:
+        activity = True                        # power button wakes like any key
+    if power and not blanked:                  # power button: screen off now
+        set_blank(True)
+        power_saving(True)
+        blanked = True
+        next_log = now
+    elif activity:
         last = now
         if blanked:
             power_saving(False)
@@ -155,6 +172,12 @@ while True:
         dimmed = backlight()
         if dimmed is not None:
             backlight(max(dimmed // 5, 200))
-    if blanked and now >= next_log:
-        log_power()
+    if now >= next_log:
+        if blanked:
+            log_power()
+        # flat battery: shut down cleanly instead of losing power mid-write
+        cap = read(BATTERY + "/capacity", "100")
+        if read(BATTERY + "/status") == "Discharging" and cap.isdigit() and int(cap) <= LOW_BATTERY:
+            log_power()
+            run("poweroff")
         next_log = now + 300

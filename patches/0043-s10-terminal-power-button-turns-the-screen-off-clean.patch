@@ -1,0 +1,95 @@
+From c373b1eea682ddc3b0dbf7dcab8113108f911cb2 Mon Sep 17 00:00:00 2001
+From: khan <khan@localhost>
+Date: Fri, 6 Nov 2026 23:19:56 +0100
+Subject: [PATCH 43/43] s10-terminal: power button turns the screen off; clean
+ poweroff at 3% battery; power log current in mA
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ device/downstream/s10-terminal/APKBUILD       |  2 +-
+ device/downstream/s10-terminal/s10-idle-blank | 29 ++++++++++++++-----
+ 2 files changed, 23 insertions(+), 8 deletions(-)
+
+diff --git a/device/downstream/s10-terminal/APKBUILD b/device/downstream/s10-terminal/APKBUILD
+index 0bc8813c35..091ea77158 100644
+--- a/device/downstream/s10-terminal/APKBUILD
++++ b/device/downstream/s10-terminal/APKBUILD
+@@ -82,7 +82,7 @@ sha512sums="
+ 39bf55c1e453af330e2b67387113c32257da794aa9208ef2d8dcb5311a1c7dfc086387ad67bdb3d1076a9613abedf53450e515fbf1c6f6ed8e6da61b69fbd7b6  s10-status
+ 2ad64dddbc4290cb8b1fe600ae686891f25ed5c589263c40027fadb460eba5755fd48de5ed57cf09f02d51dc0f8d442a6915ca77386422f4c03dec2a3f45fd5f  s10-splash
+ 5fe4dd6a2064be409b02483188d9beebd4ab3de1263a62ad2453dfa7d33dcf2494f2ff81860a8443a5db44e97a454f17f0e8b55be921ed85a28e3689c3a0ae9d  s10-splash.initd
+-f8ed8cadadc5c3186ca135193b53d1dd70a272636d66d730bc1c8c93b9fcd8ad33fa09ac7406068d7e3bb1c5be1bf5fcc2798af3a254ca5a51baea7270490ace  s10-idle-blank
++1a9addc1421ebc8e2699a2400e72ed486fdcf19b2854c15a8d829f9b4d775120c9e8ef80e4a2240d099c6e0d493b66fc9e37d957ba417652c95dd2b715333500  s10-idle-blank
+ f5b670528587d518a367b66ae15fd9b5583b7ad666e03051523cf56a1b007469fc5fad535f4d22b12106042e93352b07594ec6dbc4da50766b3757d6e103f12b  s10-touch-absfix
+ 9daf9ac5a89cd6d83560f26e35b95253ea71b20eeb3556ebdf31e2b7e4a66dfa4845c0f73c43601ac63f2e56613f17777691135d564f4924f23b9a3865838e6f  s10-osk-start
+ 00e1c13c89a90739e66e37368cfc7fb9fad81b60ccedb84c2826948f77924aee8907aa227b0e845f09e2ca5331625d08769c0e63beae7bbae8360ce319808e2f  s10-term
+diff --git a/device/downstream/s10-terminal/s10-idle-blank b/device/downstream/s10-terminal/s10-idle-blank
+index 485bb985e5..9629011c20 100644
+--- a/device/downstream/s10-terminal/s10-idle-blank
++++ b/device/downstream/s10-terminal/s10-idle-blank
+@@ -1,6 +1,7 @@
+ #!/usr/bin/python3
+-# Turn the S10 panel off after IDLE seconds without input, and back on at the
+-# first key press, touch or button (USB keyboards may be plugged in at any time).
++# Turn the S10 panel off after IDLE seconds without input, or at once with the power
++# button, and back on at the first key press, touch or button (USB keyboards may be
++# plugged in at any time).
+ # DIM seconds before that the backlight drops to a fifth, so the screen fades
+ # instead of cutting out; any input restores it.
+ #
+@@ -9,7 +10,7 @@
+ # go offline, Wi-Fi power saving is on, the touch booster and tmux status polling
+ # are off. Everything is restored on wake. Battery readings are logged every 5 min
+ # while off to /var/log/s10-power.log, to check the standby drain.
+-import glob, os, select, subprocess, time
++import glob, os, select, struct, subprocess, time
+ 
+ IDLE = int(os.environ.get("S10_IDLE_SECONDS", "120"))
+ DIM = 10
+@@ -18,6 +19,7 @@ BACKLIGHT = "/sys/class/backlight/panel/brightness"
+ BATTERY = "/sys/class/power_supply/battery"
+ POWER_LOG = "/var/log/s10-power.log"
+ LOW_BATTERY = 3                                # % on battery: clean poweroff
++EV_KEY, EV_REL, EV_ABS, KEY_POWER = 1, 2, 3, 116
+ BIG_CORES = (4, 5, 6, 7)                       # mid (A75) and big (M4) clusters
+ # Frozen while the screen is off. Names as in /proc/<pid>/comm, which the kernel cuts
+ # to 15 characters. They are frozen with the cgroup-v1 freezer, not SIGSTOP: tmux sends
+@@ -128,18 +130,31 @@ while True:
+     open_inputs(fds)  # pick up hot-plugged keyboards
+     # screen off: wake rarely (input still wakes select at once)
+     ready, _, _ = select.select(list(fds.values()), [], [], 60 if blanked else 1)
+-    activity = False
++    activity = power = False
+     for fd in ready:
+         try:
+-            if os.read(fd, 4096):
+-                activity = True
++            data = os.read(fd, 4096)
+         except OSError:  # device unplugged
+             for path, f in list(fds.items()):
+                 if f == fd:
+                     os.close(f)
+                     del fds[path]
++            continue
++        for i in range(0, len(data) - 23, 24):
++            _, _, etype, code, value = struct.unpack_from("qqHHi", data, i)
++            if etype == EV_KEY and code == KEY_POWER:
++                power = power or value == 1    # press only; its release is not activity
++            elif etype in (EV_KEY, EV_REL, EV_ABS):
++                activity = True
+     now = time.monotonic()
+-    if activity:
++    if power and blanked:
++        activity = True                        # power button wakes like any key
++    if power and not blanked:                  # power button: screen off now
++        set_blank(True)
++        power_saving(True)
++        blanked = True
++        next_log = now
++    elif activity:
+         last = now
+         if blanked:
+             power_saving(False)
+-- 
+2.53.0
+
