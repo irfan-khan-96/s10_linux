@@ -1,7 +1,7 @@
 From 8135498b90e8c3e9f1e84746bbcdcc30a1560b0f Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Sun, 1 Nov 2026 23:09:26 +0100
-Subject: [PATCH 24/44] s10-terminal: launcher menu, Alt+m returns to it
+Subject: [PATCH 24/45] s10-terminal: launcher menu, Alt+m returns to it
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---

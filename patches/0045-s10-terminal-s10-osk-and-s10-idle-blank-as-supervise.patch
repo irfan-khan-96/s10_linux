@@ -1,0 +1,269 @@
+From d666f5095537ba0f846578745055d10b0af00ce9 Mon Sep 17 00:00:00 2001
+From: khan <khan@localhost>
+Date: Sat, 7 Nov 2026 00:34:26 +0100
+Subject: [PATCH 45/45] s10-terminal: s10-osk and s10-idle-blank as supervised
+ OpenRC services; s10-update (safe upgrade with checks)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../s10-terminal/50-s10-idle-blank.start      |  2 -
+ .../downstream/s10-terminal/60-s10-osk.start  |  3 --
+ device/downstream/s10-terminal/APKBUILD       | 20 ++++----
+ .../s10-terminal/s10-idle-blank.initd         | 19 ++++++++
+ device/downstream/s10-terminal/s10-osk-start  | 14 +++---
+ device/downstream/s10-terminal/s10-osk.initd  | 19 ++++++++
+ .../s10-terminal/s10-terminal.post-install    |  2 +
+ .../s10-terminal/s10-terminal.post-upgrade    |  2 +
+ device/downstream/s10-terminal/s10-update     | 47 +++++++++++++++++++
+ 9 files changed, 108 insertions(+), 20 deletions(-)
+ delete mode 100644 device/downstream/s10-terminal/50-s10-idle-blank.start
+ delete mode 100644 device/downstream/s10-terminal/60-s10-osk.start
+ create mode 100644 device/downstream/s10-terminal/s10-idle-blank.initd
+ create mode 100644 device/downstream/s10-terminal/s10-osk.initd
+ create mode 100644 device/downstream/s10-terminal/s10-update
+
+diff --git a/device/downstream/s10-terminal/50-s10-idle-blank.start b/device/downstream/s10-terminal/50-s10-idle-blank.start
+deleted file mode 100644
+index 33bca96a7f..0000000000
+--- a/device/downstream/s10-terminal/50-s10-idle-blank.start
++++ /dev/null
+@@ -1,2 +0,0 @@
+-#!/bin/sh
+-pidof -x s10-idle-blank >/dev/null || setsid /usr/bin/s10-idle-blank >/dev/null 2>&1 < /dev/null &
+diff --git a/device/downstream/s10-terminal/60-s10-osk.start b/device/downstream/s10-terminal/60-s10-osk.start
+deleted file mode 100644
+index 13ae615e08..0000000000
+--- a/device/downstream/s10-terminal/60-s10-osk.start
++++ /dev/null
+@@ -1,3 +0,0 @@
+-#!/bin/sh
+-# on-screen keyboard in the strip fbterm leaves free (FBTERM_RESERVE_BOTTOM)
+-setsid /usr/bin/s10-osk > /tmp/osk.log 2>&1 < /dev/null &
+diff --git a/device/downstream/s10-terminal/APKBUILD b/device/downstream/s10-terminal/APKBUILD
+index d10331e03f..4bc5736336 100644
+--- a/device/downstream/s10-terminal/APKBUILD
++++ b/device/downstream/s10-terminal/APKBUILD
+@@ -2,7 +2,7 @@
+ # setup that turns samsung-beyond1lte-downstream into a pocket terminal.
+ pkgname=s10-terminal
+ pkgver=1
+-pkgrel=19
++pkgrel=20
+ pkgdesc="Galaxy S10 pocket terminal: fbterm + tmux, on-screen keyboard, hardening"
+ url="https://postmarketos.org"
+ arch="aarch64"
+@@ -31,6 +31,9 @@ source="
+ 	s10-status
+ 	s10-splash
+ 	s10-splash.initd
++	s10-osk.initd
++	s10-idle-blank.initd
++	s10-update
+ 	s10-idle-blank
+ 	s10-touch-absfix
+ 	s10-osk-start
+@@ -43,8 +46,6 @@ source="
+ 	30-usb-dhcp.start
+ 	40-s10-tuning.start
+ 	45-s10-battery.start
+-	50-s10-idle-blank.start
+-	60-s10-osk.start
+ 	90-s10-touch-absfix.rules
+ 	unudhcpd.rndis0.confd
+ 	wifi-powersave-off.conf
+@@ -54,16 +55,18 @@ source="
+ 	"
+ 
+ package() {
+-	for f in s10-osk s10-menu s10-status s10-splash s10-idle-blank s10-touch-absfix s10-osk-start s10-term; do
++	for f in s10-osk s10-menu s10-update s10-status s10-splash s10-idle-blank s10-touch-absfix s10-osk-start s10-term; do
+ 		install -Dm755 "$srcdir/$f" "$pkgdir/usr/bin/$f"
+ 	done
+ 	install -Dm755 "$srcdir"/s10-splash.initd "$pkgdir"/etc/init.d/s10-splash
++	install -Dm755 "$srcdir"/s10-osk.initd "$pkgdir"/etc/init.d/s10-osk
++	install -Dm755 "$srcdir"/s10-idle-blank.initd "$pkgdir"/etc/init.d/s10-idle-blank
+ 	# S10 VT: VT323 (OFL-1.1) plus box/block glyphs, built by tools/build-font.py
+ 	install -Dm644 "$srcdir"/S10VT-Regular.ttf "$pkgdir"/usr/share/fonts/s10-vt/S10VT-Regular.ttf
+ 	install -Dm644 "$srcdir"/OFL-VT323.txt "$pkgdir"/usr/share/licenses/$pkgname/OFL-VT323.txt
+ 	install -Dm644 "$srcdir"/fbtermrc "$pkgdir"/usr/share/s10-terminal/fbtermrc
+ 	install -Dm644 "$srcdir"/tmux.conf "$pkgdir"/etc/tmux.conf
+-	for f in 05-s10-lpm 10-firewall 20-display-on 30-usb-dhcp 40-s10-tuning 45-s10-battery 50-s10-idle-blank 60-s10-osk; do
++	for f in 05-s10-lpm 10-firewall 20-display-on 30-usb-dhcp 40-s10-tuning 45-s10-battery; do
+ 		install -Dm755 "$srcdir/$f.start" "$pkgdir/etc/local.d/$f.start"
+ 	done
+ 	install -Dm644 "$srcdir"/90-s10-touch-absfix.rules \
+@@ -83,9 +86,12 @@ sha512sums="
+ 39bf55c1e453af330e2b67387113c32257da794aa9208ef2d8dcb5311a1c7dfc086387ad67bdb3d1076a9613abedf53450e515fbf1c6f6ed8e6da61b69fbd7b6  s10-status
+ 2ad64dddbc4290cb8b1fe600ae686891f25ed5c589263c40027fadb460eba5755fd48de5ed57cf09f02d51dc0f8d442a6915ca77386422f4c03dec2a3f45fd5f  s10-splash
+ 5fe4dd6a2064be409b02483188d9beebd4ab3de1263a62ad2453dfa7d33dcf2494f2ff81860a8443a5db44e97a454f17f0e8b55be921ed85a28e3689c3a0ae9d  s10-splash.initd
++04fb5bc314ae3da0142ee8e8d592451edf924ecbcd63b4c7ba9a3659ac78500848735e27df90b2a5546d575b0b3154f996ed23dc5299cefeabff971f74f5df3c  s10-osk.initd
++d8152bc08c65c19b05f917b7c967555df849b352fc45f8262ffff91f5ce72ca4225a8f1d07a283d481ec2d0c1deb60cd9907172578b27aa55651844001ef6ed5  s10-idle-blank.initd
++8e7a8e29325566c876f870d85317a8375134e452f7709d6925a4bfd90321bd31545a340d19b86558c4e4636051b054a36e5fb79d6efd1cb69ea88c79eacb395f  s10-update
+ 1a9addc1421ebc8e2699a2400e72ed486fdcf19b2854c15a8d829f9b4d775120c9e8ef80e4a2240d099c6e0d493b66fc9e37d957ba417652c95dd2b715333500  s10-idle-blank
+ f5b670528587d518a367b66ae15fd9b5583b7ad666e03051523cf56a1b007469fc5fad535f4d22b12106042e93352b07594ec6dbc4da50766b3757d6e103f12b  s10-touch-absfix
+-9daf9ac5a89cd6d83560f26e35b95253ea71b20eeb3556ebdf31e2b7e4a66dfa4845c0f73c43601ac63f2e56613f17777691135d564f4924f23b9a3865838e6f  s10-osk-start
++0f06787cbb28a1e53659f3fd410c219d380e17ce771dbf52810bb4a2f246cabd0fde6fba34497bc33b87b21d81d8e368a668013741dced17c84c8b20340714ca  s10-osk-start
+ 00e1c13c89a90739e66e37368cfc7fb9fad81b60ccedb84c2826948f77924aee8907aa227b0e845f09e2ca5331625d08769c0e63beae7bbae8360ce319808e2f  s10-term
+ 57a90c056354401584f280ba2e94483dd08dc89fbbd643626f04a1d121ddd0c6a180efb477d863ecd4b2da95325ca8576d355c4467a774c39a08f594978e2675  fbtermrc
+ fd54415383f1a8009f3dd726b40dba7dcc4a2f655ecdd6a076cce1de0ecdd2743c5c52ecf0d6b8148b24b9d7284063fd99effd4ea0fc5958073cb1b017b719af  tmux.conf
+@@ -95,8 +101,6 @@ c433073ec72b77dbcf13882f7fd92a5915fee1fe3dd3db60fc1e966de7a694e5c63a3b0e2f306898
+ 13ff9308e064e707cdf329b867d29ba7668e5662c36cc58212b1e13dbb4314c1e2d64b5ec2c9b6a0088f38c8d677162a7ecc1a4d7a488ff6ee86c3c8bf9680de  30-usb-dhcp.start
+ 6bd9d0b40ebf0fc1528e56e445d11e06c8d42c70b44f1fe4c8eccc4832570519a0f0d41c0b1ee433d6a6c95ce220b66fa4e4921df36837c3d083b62285f2e6ff  40-s10-tuning.start
+ 51be5db0e644129a02f5d152264ccc98814629be17ed1cd052b1e346d2dc98c0489ee22781fc823eb582871a232a216151e3eecae7e1409bd6c84a5adfed7a48  45-s10-battery.start
+-f3efe2a495d1d1244094cda02a17814ff57ab5c2f49942cfbfaa4ddc385c686d9a8048c92a1b42d1e3d517f0d75396fe5d1d9d01dc966976492ad437d6e928ea  50-s10-idle-blank.start
+-38b4b7aaadec367ed30dc9daa7d8d958972b6fb807817f22487029123e3527e62c28fa3be49d739985a101db9033bd29727be118a09eb5086d755fcb3f2dd289  60-s10-osk.start
+ a484b168fdd2edfa58d0cfeab44448ec0d019ef4c27f4a24057be8bf7842c0a3447c847dc2e45353ad4f11bdd133495b4942f6367bb6ab49a807451ca7c283eb  90-s10-touch-absfix.rules
+ 1380cb0f25b065a8c908dcaf462c08832c4100992ec2c548d70b43aacbd5dcd0093fd96cc8671bfd6710c2bee7b543ab10b8e9ff90a201b370adea3f638f8c7a  unudhcpd.rndis0.confd
+ 8692b03ef5951179e8e2d622285925d8db9ec1999fe71c5611a37ba67f7c44b209c44ae4f467dfb3bb96f4b3257a243dc3060bf73e218d372fd06ca31e9e8de0  wifi-powersave-off.conf
+diff --git a/device/downstream/s10-terminal/s10-idle-blank.initd b/device/downstream/s10-terminal/s10-idle-blank.initd
+new file mode 100644
+index 0000000000..1810d127a9
+--- /dev/null
++++ b/device/downstream/s10-terminal/s10-idle-blank.initd
+@@ -0,0 +1,19 @@
++#!/sbin/openrc-run
++# Screen dim/off, power button, screen-off power saver, low-battery poweroff
++# (s10-idle-blank). Supervised: restarted within 2 s if it ever exits.
++description="S10 screen-off and power saving"
++supervisor=supervise-daemon
++command=/usr/bin/s10-idle-blank
++output_log=/var/log/s10-idle-blank.log
++error_log=/var/log/s10-idle-blank.log
++respawn_delay=2
++respawn_max=0
++
++depend() {
++	need localmount
++	after udev-settle local
++}
++
++start_pre() {
++	: > /var/log/s10-idle-blank.log
++}
+diff --git a/device/downstream/s10-terminal/s10-osk-start b/device/downstream/s10-terminal/s10-osk-start
+index 637959662c..07e0520775 100644
+--- a/device/downstream/s10-terminal/s10-osk-start
++++ b/device/downstream/s10-terminal/s10-osk-start
+@@ -1,8 +1,8 @@
+ #!/bin/sh
+-# (Re)start the idle screen-off daemon and the on-screen keyboard. Run as root.
+-# Exact patterns, so this script never matches itself.
+-pkill -f '^/usr/bin/python3 /usr/bin/s10-osk$'
+-pkill -f '^/usr/bin/python3 /usr/bin/s10-idle-blank$'
+-sleep 1
+-setsid /usr/bin/s10-idle-blank >/dev/null 2>&1 < /dev/null &
+-setsid /usr/bin/s10-osk > /tmp/osk.log 2>&1 < /dev/null &
++# (Re)start the screen-off daemon and the on-screen keyboard. Run as root.
++# Both are supervised OpenRC services; stop copies started the old way (before r20)
++# first. Exact patterns, so this script never matches itself.
++pkill -f '^/usr/bin/python3 /usr/bin/s10-osk$' 2>/dev/null
++pkill -f '^/usr/bin/python3 /usr/bin/s10-idle-blank$' 2>/dev/null
++rc-service s10-idle-blank restart
++rc-service s10-osk restart
+diff --git a/device/downstream/s10-terminal/s10-osk.initd b/device/downstream/s10-terminal/s10-osk.initd
+new file mode 100644
+index 0000000000..b81adc514a
+--- /dev/null
++++ b/device/downstream/s10-terminal/s10-osk.initd
+@@ -0,0 +1,19 @@
++#!/sbin/openrc-run
++# On-screen keyboard, touch gestures, volume keys (s10-osk). Supervised: restarted
++# within 2 s if it ever exits, so the phone cannot be left without touch input.
++description="S10 on-screen keyboard and touch handling"
++supervisor=supervise-daemon
++command=/usr/bin/s10-osk
++output_log=/var/log/s10-osk.log
++error_log=/var/log/s10-osk.log
++respawn_delay=2
++respawn_max=0
++
++depend() {
++	need localmount
++	after udev-settle local
++}
++
++start_pre() {
++	: > /var/log/s10-osk.log                  # one boot's worth of log
++}
+diff --git a/device/downstream/s10-terminal/s10-terminal.post-install b/device/downstream/s10-terminal/s10-terminal.post-install
+index 115b102eb9..a5764fcc13 100644
+--- a/device/downstream/s10-terminal/s10-terminal.post-install
++++ b/device/downstream/s10-terminal/s10-terminal.post-install
+@@ -3,6 +3,8 @@
+ user=$(getent passwd 10000 | cut -d: -f1)
+ rc-update -q add local default
+ rc-update -q add s10-splash boot
++rc-update -q add s10-idle-blank default
++rc-update -q add s10-osk default
+ rm -f /var/cache/s10-terminal/splash.rgb565   # re-rendered on next boot
+ rc-update -q add msm-fb-refresher default
+ rc-update -q del unudhcpd.usb0 boot 2>/dev/null
+diff --git a/device/downstream/s10-terminal/s10-terminal.post-upgrade b/device/downstream/s10-terminal/s10-terminal.post-upgrade
+index 115b102eb9..a5764fcc13 100644
+--- a/device/downstream/s10-terminal/s10-terminal.post-upgrade
++++ b/device/downstream/s10-terminal/s10-terminal.post-upgrade
+@@ -3,6 +3,8 @@
+ user=$(getent passwd 10000 | cut -d: -f1)
+ rc-update -q add local default
+ rc-update -q add s10-splash boot
++rc-update -q add s10-idle-blank default
++rc-update -q add s10-osk default
+ rm -f /var/cache/s10-terminal/splash.rgb565   # re-rendered on next boot
+ rc-update -q add msm-fb-refresher default
+ rc-update -q del unudhcpd.usb0 boot 2>/dev/null
+diff --git a/device/downstream/s10-terminal/s10-update b/device/downstream/s10-terminal/s10-update
+new file mode 100644
+index 0000000000..dc6890761e
+--- /dev/null
++++ b/device/downstream/s10-terminal/s10-update
+@@ -0,0 +1,47 @@
++#!/bin/sh
++# Safe system update for the S10: run with sudo. Shows what would change and asks first,
++# never removes packages (no --prune: our own packages are not in the online repos),
++# then reports config files that need merging (*.apk-new) and checks the S10 setup.
++# The kernel, device and firmware packages come from our fork, so apk never replaces them;
++# if a hook rebuilds /boot/boot.img it is NOT flashed: the old boot partition stays.
++set -e
++[ "$(id -u)" = 0 ] || { echo "run with sudo: sudo s10-update"; exit 1; }
++
++boot_before=$(md5sum /boot/boot.img 2>/dev/null | cut -d' ' -f1)
++echo ">>> refreshing package lists"
++apk update -q
++changes=$(apk upgrade --simulate 2>&1 | grep -E '^\(' || true)
++if [ -z "$changes" ]; then
++	echo ">>> everything is up to date"
++	exit 0
++fi
++echo ">>> $(echo "$changes" | wc -l) packages would be upgraded:"
++echo "$changes" | sed 's/^/    /'
++printf ">>> upgrade now? [y/N] "
++read -r answer
++[ "$answer" = y ] || [ "$answer" = Y ] || { echo "nothing changed"; exit 0; }
++
++apk upgrade
++echo
++new=$(find /etc -name '*.apk-new' 2>/dev/null)
++if [ -n "$new" ]; then
++	echo ">>> config files with a new upstream version (yours is kept; compare and merge by hand):"
++	echo "$new" | sed 's/^/    /'
++fi
++
++echo ">>> S10 setup check"
++ok() { echo "    ok   $1"; }
++bad() { echo "    FIX  $1"; }
++grep -q '^tty1::respawn:.*s10-term' /etc/inittab && ok "terminal on tty1" || bad "tty1 line in /etc/inittab (reinstall s10-terminal)"
++grep -q '^tty[2-6]::' /etc/inittab && bad "logins on tty2-6 came back (reinstall s10-terminal)" || ok "no logins on tty2-6"
++for s in s10-osk s10-idle-blank msm-fb-refresher sshd networkmanager; do
++	rc-service -q "$s" status >/dev/null 2>&1 && ok "$s running" || bad "$s not running: rc-service $s start"
++done
++[ -e /etc/ssh/sshd_config.d/10-hardening.conf ] && ok "SSH hardening in place" || bad "SSH hardening missing"
++iptables-legacy -S INPUT 2>/dev/null | grep -q -- '-P INPUT DROP' && ok "firewall active" || bad "firewall not active: sh /etc/local.d/10-firewall.start"
++boot_after=$(md5sum /boot/boot.img 2>/dev/null | cut -d' ' -f1)
++if [ "$boot_before" != "$boot_after" ]; then
++	echo "    note /boot/boot.img was rebuilt but not flashed; the phone keeps booting the old one."
++	echo "         Only flash it (dd to /dev/sda14) when you have a reason to and the serial rescue at hand."
++fi
++echo ">>> done. Reboot only if the kernel-side packages changed or something above says FIX."
+-- 
+2.53.0
+

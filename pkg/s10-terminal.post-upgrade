@@ -3,6 +3,8 @@
 user=$(getent passwd 10000 | cut -d: -f1)
 rc-update -q add local default
 rc-update -q add s10-splash boot
+rc-update -q add s10-idle-blank default
+rc-update -q add s10-osk default
 rm -f /var/cache/s10-terminal/splash.rgb565   # re-rendered on next boot
 rc-update -q add msm-fb-refresher default
 rc-update -q del unudhcpd.usb0 boot 2>/dev/null

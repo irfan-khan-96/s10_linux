@@ -9,5 +9,5 @@ for p in s10-osk s10-idle-blank fbterm msm-fb-refresh; do
 	done
 done
 tmux list-windows -F '#I:#W #{pane_current_command} mode=#{pane_in_mode} active=#{window_active}'
-echo "--- osk.log"; tail -15 /tmp/osk.log
+echo "--- osk.log"; tail -15 /var/log/s10-osk.log
 echo "--- recent panel messages"; dmesg | grep -E 'panel_fb_notifier|Display ON|decon_pan_display' | tail -4

@@ -1,0 +1,19 @@
+#!/sbin/openrc-run
+# On-screen keyboard, touch gestures, volume keys (s10-osk). Supervised: restarted
+# within 2 s if it ever exits, so the phone cannot be left without touch input.
+description="S10 on-screen keyboard and touch handling"
+supervisor=supervise-daemon
+command=/usr/bin/s10-osk
+output_log=/var/log/s10-osk.log
+error_log=/var/log/s10-osk.log
+respawn_delay=2
+respawn_max=0
+
+depend() {
+	need localmount
+	after udev-settle local
+}
+
+start_pre() {
+	: > /var/log/s10-osk.log                  # one boot's worth of log
+}

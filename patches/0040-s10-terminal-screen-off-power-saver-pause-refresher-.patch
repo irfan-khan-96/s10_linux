@@ -1,7 +1,7 @@
 From 25f81b01ab52e6396ed487c3b4653fc000ab50f1 Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Tue, 3 Nov 2026 13:59:30 +0100
-Subject: [PATCH 40/44] s10-terminal: screen-off power saver (pause refresher
+Subject: [PATCH 40/45] s10-terminal: screen-off power saver (pause refresher
  and monitors, cores 4-7 offline, Wi-Fi power save, fewer wakeups), power log
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

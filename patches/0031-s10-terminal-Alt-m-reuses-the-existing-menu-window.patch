@@ -1,7 +1,7 @@
 From 61a3cc1af6465d25f94bd1077f8ca1116e079f36 Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Mon, 2 Nov 2026 00:34:52 +0100
-Subject: [PATCH 31/44] s10-terminal: Alt+m reuses the existing menu window
+Subject: [PATCH 31/45] s10-terminal: Alt+m reuses the existing menu window
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---

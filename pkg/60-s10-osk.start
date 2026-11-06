@@ -1,3 +1,0 @@
-#!/bin/sh
-# on-screen keyboard in the strip fbterm leaves free (FBTERM_RESERVE_BOTTOM)
-setsid /usr/bin/s10-osk > /tmp/osk.log 2>&1 < /dev/null &

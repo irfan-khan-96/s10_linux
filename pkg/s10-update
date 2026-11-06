@@ -1,0 +1,47 @@
+#!/bin/sh
+# Safe system update for the S10: run with sudo. Shows what would change and asks first,
+# never removes packages (no --prune: our own packages are not in the online repos),
+# then reports config files that need merging (*.apk-new) and checks the S10 setup.
+# The kernel, device and firmware packages come from our fork, so apk never replaces them;
+# if a hook rebuilds /boot/boot.img it is NOT flashed: the old boot partition stays.
+set -e
+[ "$(id -u)" = 0 ] || { echo "run with sudo: sudo s10-update"; exit 1; }
+
+boot_before=$(md5sum /boot/boot.img 2>/dev/null | cut -d' ' -f1)
+echo ">>> refreshing package lists"
+apk update -q
+changes=$(apk upgrade --simulate 2>&1 | grep -E '^\(' || true)
+if [ -z "$changes" ]; then
+	echo ">>> everything is up to date"
+	exit 0
+fi
+echo ">>> $(echo "$changes" | wc -l) packages would be upgraded:"
+echo "$changes" | sed 's/^/    /'
+printf ">>> upgrade now? [y/N] "
+read -r answer
+[ "$answer" = y ] || [ "$answer" = Y ] || { echo "nothing changed"; exit 0; }
+
+apk upgrade
+echo
+new=$(find /etc -name '*.apk-new' 2>/dev/null)
+if [ -n "$new" ]; then
+	echo ">>> config files with a new upstream version (yours is kept; compare and merge by hand):"
+	echo "$new" | sed 's/^/    /'
+fi
+
+echo ">>> S10 setup check"
+ok() { echo "    ok   $1"; }
+bad() { echo "    FIX  $1"; }
+grep -q '^tty1::respawn:.*s10-term' /etc/inittab && ok "terminal on tty1" || bad "tty1 line in /etc/inittab (reinstall s10-terminal)"
+grep -q '^tty[2-6]::' /etc/inittab && bad "logins on tty2-6 came back (reinstall s10-terminal)" || ok "no logins on tty2-6"
+for s in s10-osk s10-idle-blank msm-fb-refresher sshd networkmanager; do
+	rc-service -q "$s" status >/dev/null 2>&1 && ok "$s running" || bad "$s not running: rc-service $s start"
+done
+[ -e /etc/ssh/sshd_config.d/10-hardening.conf ] && ok "SSH hardening in place" || bad "SSH hardening missing"
+iptables-legacy -S INPUT 2>/dev/null | grep -q -- '-P INPUT DROP' && ok "firewall active" || bad "firewall not active: sh /etc/local.d/10-firewall.start"
+boot_after=$(md5sum /boot/boot.img 2>/dev/null | cut -d' ' -f1)
+if [ "$boot_before" != "$boot_after" ]; then
+	echo "    note /boot/boot.img was rebuilt but not flashed; the phone keeps booting the old one."
+	echo "         Only flash it (dd to /dev/sda14) when you have a reason to and the serial rescue at hand."
+fi
+echo ">>> done. Reboot only if the kernel-side packages changed or something above says FIX."

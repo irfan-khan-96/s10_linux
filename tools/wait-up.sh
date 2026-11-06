@@ -7,5 +7,5 @@ done
 ssh s10 'echo "uptime $(cut -d" " -f1 /proc/uptime)s"
 ls -l /dev/input/s10-touchscreen 2>&1
 for d in /sys/class/input/event*; do printf "%s " "$(cat $d/device/name)"; done; echo
-pgrep -af "s10-osk$" || echo "s10-osk NOT running"; tail -3 /tmp/osk.log
+pgrep -af "s10-osk$" || echo "s10-osk NOT running"; tail -3 /var/log/s10-osk.log
 ls -l /var/log/dmesg*'

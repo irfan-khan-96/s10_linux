@@ -1,0 +1,19 @@
+#!/sbin/openrc-run
+# Screen dim/off, power button, screen-off power saver, low-battery poweroff
+# (s10-idle-blank). Supervised: restarted within 2 s if it ever exits.
+description="S10 screen-off and power saving"
+supervisor=supervise-daemon
+command=/usr/bin/s10-idle-blank
+output_log=/var/log/s10-idle-blank.log
+error_log=/var/log/s10-idle-blank.log
+respawn_delay=2
+respawn_max=0
+
+depend() {
+	need localmount
+	after udev-settle local
+}
+
+start_pre() {
+	: > /var/log/s10-idle-blank.log
+}

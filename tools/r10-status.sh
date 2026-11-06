@@ -8,7 +8,7 @@ echo "brightness $(cat /sys/class/backlight/panel/brightness)  night_mode $(cat 
 rc-update show boot 2>/dev/null | grep splash; ls -l /var/cache/s10-terminal/ 2>&1
 echo "status: $(s10-status)"
 tmux list-windows -F '#I:#W' | tr '\n' ' '; echo
-echo "--- osk.log"; cat /tmp/osk.log
+echo "--- osk.log"; cat /var/log/s10-osk.log
 apk list -I fbterm 2>/dev/null
 tmux display -p 'term=#{client_termname} features=#{client_termfeatures}'
 tmux list-clients -F 'client #{client_width}x#{client_height}'

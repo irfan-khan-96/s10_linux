@@ -1,8 +1,8 @@
 #!/bin/sh
-# (Re)start the idle screen-off daemon and the on-screen keyboard. Run as root.
-# Exact patterns, so this script never matches itself.
-pkill -f '^/usr/bin/python3 /usr/bin/s10-osk$'
-pkill -f '^/usr/bin/python3 /usr/bin/s10-idle-blank$'
-sleep 1
-setsid /usr/bin/s10-idle-blank >/dev/null 2>&1 < /dev/null &
-setsid /usr/bin/s10-osk > /tmp/osk.log 2>&1 < /dev/null &
+# (Re)start the screen-off daemon and the on-screen keyboard. Run as root.
+# Both are supervised OpenRC services; stop copies started the old way (before r20)
+# first. Exact patterns, so this script never matches itself.
+pkill -f '^/usr/bin/python3 /usr/bin/s10-osk$' 2>/dev/null
+pkill -f '^/usr/bin/python3 /usr/bin/s10-idle-blank$' 2>/dev/null
+rc-service s10-idle-blank restart
+rc-service s10-osk restart
