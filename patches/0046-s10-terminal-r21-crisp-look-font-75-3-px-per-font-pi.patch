@@ -1,0 +1,219 @@
+From 12510ee3d050fb267c8ef732ad900dadb51e1f51 Mon Sep 17 00:00:00 2001
+From: khan <khan@localhost>
+Date: Sat, 7 Nov 2026 12:35:59 +0100
+Subject: [PATCH 46/47] s10-terminal r21: crisp look (font 75 = 3 px per font
+ pixel, no anti-aliasing, brighter amber)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../s10-terminal/61-s10-vt-crisp.conf         | 11 +++++++++
+ device/downstream/s10-terminal/APKBUILD       | 11 +++++----
+ device/downstream/s10-terminal/s10-osk        | 23 ++++++++++++-------
+ device/downstream/s10-terminal/s10-splash     |  9 ++++----
+ device/downstream/s10-terminal/s10-term       |  6 +++--
+ 5 files changed, 42 insertions(+), 18 deletions(-)
+ create mode 100644 device/downstream/s10-terminal/61-s10-vt-crisp.conf
+
+diff --git a/device/downstream/s10-terminal/61-s10-vt-crisp.conf b/device/downstream/s10-terminal/61-s10-vt-crisp.conf
+new file mode 100644
+index 0000000000..fa297749da
+--- /dev/null
++++ b/device/downstream/s10-terminal/61-s10-vt-crisp.conf
+@@ -0,0 +1,11 @@
++<?xml version="1.0"?>
++<!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">
++<!-- S10 VT is a pixel font drawn on a 40-unit grid. At sizes where one font pixel is a whole
++     number of screen pixels (25, 50, 75, 100) it renders exactly without smoothing, so turn
++     anti-aliasing off: hard pixel edges, and cheaper to draw. -->
++<fontconfig>
++  <match target="font">
++    <test name="family"><string>S10 VT</string></test>
++    <edit name="antialias" mode="assign"><bool>false</bool></edit>
++  </match>
++</fontconfig>
+diff --git a/device/downstream/s10-terminal/APKBUILD b/device/downstream/s10-terminal/APKBUILD
+index 4bc5736336..af3bbfe01b 100644
+--- a/device/downstream/s10-terminal/APKBUILD
++++ b/device/downstream/s10-terminal/APKBUILD
+@@ -2,7 +2,7 @@
+ # setup that turns samsung-beyond1lte-downstream into a pocket terminal.
+ pkgname=s10-terminal
+ pkgver=1
+-pkgrel=20
++pkgrel=21
+ pkgdesc="Galaxy S10 pocket terminal: fbterm + tmux, on-screen keyboard, hardening"
+ url="https://postmarketos.org"
+ arch="aarch64"
+@@ -51,6 +51,7 @@ source="
+ 	wifi-powersave-off.conf
+ 	sshd-hardening.conf
+ 	S10VT-Regular.ttf
++	61-s10-vt-crisp.conf
+ 	OFL-VT323.txt
+ 	"
+ 
+@@ -63,6 +64,7 @@ package() {
+ 	install -Dm755 "$srcdir"/s10-idle-blank.initd "$pkgdir"/etc/init.d/s10-idle-blank
+ 	# S10 VT: VT323 (OFL-1.1) plus box/block glyphs, built by tools/build-font.py
+ 	install -Dm644 "$srcdir"/S10VT-Regular.ttf "$pkgdir"/usr/share/fonts/s10-vt/S10VT-Regular.ttf
++	install -Dm644 "$srcdir"/61-s10-vt-crisp.conf "$pkgdir"/etc/fonts/conf.d/61-s10-vt-crisp.conf
+ 	install -Dm644 "$srcdir"/OFL-VT323.txt "$pkgdir"/usr/share/licenses/$pkgname/OFL-VT323.txt
+ 	install -Dm644 "$srcdir"/fbtermrc "$pkgdir"/usr/share/s10-terminal/fbtermrc
+ 	install -Dm644 "$srcdir"/tmux.conf "$pkgdir"/etc/tmux.conf
+@@ -81,10 +83,10 @@ package() {
+ }
+ 
+ sha512sums="
+-1272b8fc66197afe0aa7c19c4831b5f015269d6019489b1beef85853ae637029f7e1e637b43298918a5a3b01af27b696c9c8eb28d7ae4acf113e4930e488fda7  s10-osk
++8dd79cccaa1ba2f89fed035b504267a7a135717aafdb140d398b6e5ff9f862cad4394baf35b3e6a91b7265bbf69c8ef3bfadd5b91ec921adc4a83866fabf0d19  s10-osk
+ 7978663b06fd47636c689e0d2769e706bf37bb475b9b9b190193ec186f2a7697468a969c984af242f4b892754d907918d8a0a7b24300bae7465e76607dc380ee  s10-menu
+ 39bf55c1e453af330e2b67387113c32257da794aa9208ef2d8dcb5311a1c7dfc086387ad67bdb3d1076a9613abedf53450e515fbf1c6f6ed8e6da61b69fbd7b6  s10-status
+-2ad64dddbc4290cb8b1fe600ae686891f25ed5c589263c40027fadb460eba5755fd48de5ed57cf09f02d51dc0f8d442a6915ca77386422f4c03dec2a3f45fd5f  s10-splash
++603b0ba74e8e825ef9ec4eb3c8c28e0286dad98c0a9c278e9ea9dd8177a4cde6ba1fc3b5463e4cb8980685acfb112dcf4443d9c1dda54cf74aa62d54cf109b0d  s10-splash
+ 5fe4dd6a2064be409b02483188d9beebd4ab3de1263a62ad2453dfa7d33dcf2494f2ff81860a8443a5db44e97a454f17f0e8b55be921ed85a28e3689c3a0ae9d  s10-splash.initd
+ 04fb5bc314ae3da0142ee8e8d592451edf924ecbcd63b4c7ba9a3659ac78500848735e27df90b2a5546d575b0b3154f996ed23dc5299cefeabff971f74f5df3c  s10-osk.initd
+ d8152bc08c65c19b05f917b7c967555df849b352fc45f8262ffff91f5ce72ca4225a8f1d07a283d481ec2d0c1deb60cd9907172578b27aa55651844001ef6ed5  s10-idle-blank.initd
+@@ -92,7 +94,7 @@ d8152bc08c65c19b05f917b7c967555df849b352fc45f8262ffff91f5ce72ca4225a8f1d07a283d4
+ 1a9addc1421ebc8e2699a2400e72ed486fdcf19b2854c15a8d829f9b4d775120c9e8ef80e4a2240d099c6e0d493b66fc9e37d957ba417652c95dd2b715333500  s10-idle-blank
+ f5b670528587d518a367b66ae15fd9b5583b7ad666e03051523cf56a1b007469fc5fad535f4d22b12106042e93352b07594ec6dbc4da50766b3757d6e103f12b  s10-touch-absfix
+ 0f06787cbb28a1e53659f3fd410c219d380e17ce771dbf52810bb4a2f246cabd0fde6fba34497bc33b87b21d81d8e368a668013741dced17c84c8b20340714ca  s10-osk-start
+-00e1c13c89a90739e66e37368cfc7fb9fad81b60ccedb84c2826948f77924aee8907aa227b0e845f09e2ca5331625d08769c0e63beae7bbae8360ce319808e2f  s10-term
++36d095a1c678b8107859007b4c34c45ffea2e07a06e6fbaed3616736f13e0e556fffecf69bce551f39fbea00073ea6a4687ea5726c7f61946918ac1849e87896  s10-term
+ 57a90c056354401584f280ba2e94483dd08dc89fbbd643626f04a1d121ddd0c6a180efb477d863ecd4b2da95325ca8576d355c4467a774c39a08f594978e2675  fbtermrc
+ fd54415383f1a8009f3dd726b40dba7dcc4a2f655ecdd6a076cce1de0ecdd2743c5c52ecf0d6b8148b24b9d7284063fd99effd4ea0fc5958073cb1b017b719af  tmux.conf
+ c433073ec72b77dbcf13882f7fd92a5915fee1fe3dd3db60fc1e966de7a694e5c63a3b0e2f30689815ae8242d26c2f8807664a9d6c1bcac9d423ff8cd0561f17  05-s10-lpm.start
+@@ -106,5 +108,6 @@ a484b168fdd2edfa58d0cfeab44448ec0d019ef4c27f4a24057be8bf7842c0a3447c847dc2e45353
+ 8692b03ef5951179e8e2d622285925d8db9ec1999fe71c5611a37ba67f7c44b209c44ae4f467dfb3bb96f4b3257a243dc3060bf73e218d372fd06ca31e9e8de0  wifi-powersave-off.conf
+ 8390ae37016c3ba3cedf73b63c343c2eaf1329ba56b196f24cb58e5e0dfcff6850c60005792e36948fc14361748ea91a00341cf28c90f9e172e0c91e9afd0622  sshd-hardening.conf
+ 7bd947594bb4cca1675d4ae626726c65020fc37ac36759409088e935d5fa083c5d8b25b4f0dd84c98c0b523cbdf6c86ea45ac18a4f8b1a58fe77a37bcb9edb47  S10VT-Regular.ttf
++14e03c63ffed4daabbc51b9f8558c7886a47755cc44a917af360e016e2fb9a402f8f7d7eddace120fd6884e84c9f502efa536fda508e4f57bc328b5969ad5cb1  61-s10-vt-crisp.conf
+ bb8e29450b4017b1092e674c20e0ab7ffd6161790627bfdea332a2433706c9d14d13311a229a341f77acf43cf1329a2889770a323986fceea8cea21c0f0828ad  OFL-VT323.txt
+ "
+diff --git a/device/downstream/s10-terminal/s10-osk b/device/downstream/s10-terminal/s10-osk
+index b9afd43439..45308ba61e 100644
+--- a/device/downstream/s10-terminal/s10-osk
++++ b/device/downstream/s10-terminal/s10-osk
+@@ -68,9 +68,9 @@ FLICK = 70                                  # px upward on a key: type its corne
+ 
+ # Soft amber phosphor, matching the palette s10-term loads into fbterm: dark amber
+ # keys with amber labels; a key lights up solid amber while pressed.
+-BG, TEXT, DIM, HINT = (5, 2, 0), (232, 168, 60), (110, 76, 22), (140, 98, 34)
++BG, TEXT, DIM, HINT = (5, 2, 0), (244, 178, 64), (128, 88, 26), (156, 108, 36)
+ KEY, SPECIAL = (34, 22, 6), (24, 15, 4)                    # letter keys / function keys
+-ACCENT, ACTIVE = (232, 168, 60), (92, 62, 16)              # pressed / held modifier fill
++ACCENT, ACTIVE = (244, 178, 64), (92, 62, 16)              # pressed / held modifier fill
+ PAD = 6
+ 
+ def scan_period():
+@@ -86,10 +86,11 @@ class Keyboard:
+     def __init__(self):
+         fd = os.open("/dev/fb0", os.O_RDWR)
+         self.fb = mmap.mmap(fd, LL * H_SCREEN, mmap.MAP_SHARED, mmap.PROT_READ | mmap.PROT_WRITE)
+-        self.font = ImageFont.truetype(FONT, 80)
++        # sizes in multiples of 25, so a font pixel is a whole number of screen pixels
++        self.font = ImageFont.truetype(FONT, 75)
+         self.small = ImageFont.truetype(FONT, 50)
+-        self.tiny = ImageFont.truetype(FONT, 36)
+-        self.big = ImageFont.truetype(FONT, 110)
++        self.tiny = ImageFont.truetype(FONT, 50)
++        self.big = ImageFont.truetype(FONT, 100)
+         self.screen = np.ndarray((H_SCREEN, W), dtype="<u2", buffer=self.fb)   # fb as pixels
+         self.layer, self.mods = "abc", set()
+         self.pressed = None                      # action of the key under the finger
+@@ -164,7 +165,7 @@ class Keyboard:
+         state = (self.layer, frozenset(self.mods))
+         if state not in self.bases:
+             img = Image.new("RGB", (W, KB_H), BG)
+-            d = ImageDraw.Draw(img)
++            d = crisp(ImageDraw.Draw(img))
+             d.rectangle((0, 0, W, 2), fill=DIM)                  # rule between terminal and keys
+             for box, label, action in self.keys:
+                 self.draw_key(d, box, label, action, self.key_colour(action))
+@@ -199,7 +200,7 @@ class Keyboard:
+             return
+         (x0, y0, x1, y1), box, label = found
+         img = self.base()[0].crop((x0, y0, x1, y1))
+-        d = ImageDraw.Draw(img)
++        d = crisp(ImageDraw.Draw(img))
+         self.draw_key(d, box, label, action, ACCENT, x0, y0)
+         if action.startswith("c:") and action != "c: ":
+             p = self.popup_box(box)
+@@ -223,7 +224,7 @@ class Keyboard:
+         """Full-screen message (shown while fbterm restarts), drawn for the coming orientation."""
+         cw, ch = (H_SCREEN, W) if rotation in (1, 3) else (W, H_SCREEN)
+         img = Image.new("RGB", (cw, ch), BG)
+-        d = ImageDraw.Draw(img)
++        d = crisp(ImageDraw.Draw(img))
+         d.text((cw / 2, ch / 2), text, font=self.big, fill=ACCENT, anchor="mm")
+         if rotation == 1: img = img.transpose(Image.Transpose.ROTATE_270)
+         elif rotation == 3: img = img.transpose(Image.Transpose.ROTATE_90)
+@@ -256,6 +257,12 @@ class Keyboard:
+             self.mods -= {"SHIFT", "CTRL", "ALT"}       # one-shot modifiers
+         buzz()
+ 
++def crisp(d):
++    """Draw text without smoothing: hard pixel edges, like the terminal."""
++    d.fontmode = "1"
++    return d
++
++
+ def to565(img, y0=None):
+     """PIL RGB image -> RGB565 pixels; with y0 (its screen row) the scanline rows are halved
+     exactly where fbterm halves them (screen row % N == N - 1)."""
+diff --git a/device/downstream/s10-terminal/s10-splash b/device/downstream/s10-terminal/s10-splash
+index 2f57bf9f00..c3f2b01856 100644
+--- a/device/downstream/s10-terminal/s10-splash
++++ b/device/downstream/s10-terminal/s10-splash
+@@ -9,7 +9,7 @@ W, H = 1440, 3040
+ LL = W * 2
+ CACHE = "/var/cache/s10-terminal/splash.rgb565"
+ FONT = "/usr/share/fonts/s10-vt/S10VT-Regular.ttf"
+-AMBER, DIM, BG = (232, 168, 60), (110, 76, 22), (5, 2, 0)
++AMBER, DIM, BG = (244, 178, 64), (128, 88, 26), (5, 2, 0)
+ 
+ def render():
+     """Amber 'BIOS' screen in the terminal's font, with the same scanlines as fbterm."""
+@@ -17,7 +17,8 @@ def render():
+     from PIL import Image, ImageDraw, ImageFont
+     img = Image.new("RGB", (W, H), BG)
+     d = ImageDraw.Draw(img)
+-    big, text = ImageFont.truetype(FONT, 300), ImageFont.truetype(FONT, 64)
++    d.fontmode = "1"                  # no smoothing: hard pixel edges, like the terminal
++    big, text = ImageFont.truetype(FONT, 300), ImageFont.truetype(FONT, 75)
+     d.text((W / 2, 900), "S10", font=big, fill=AMBER, anchor="mm")
+     d.rectangle((120, 1120, W - 120, 1126), fill=DIM)
+     lines = [("POCKET TERMINAL", AMBER), ("", None),
+@@ -28,8 +29,8 @@ def render():
+     for line, colour in lines:
+         if line:
+             d.text((160, y), line, font=text, fill=colour)
+-        y += 80
+-    d.rectangle((160 + 8 * 26 + 10, y - 80 + 8, 160 + 9 * 26 + 6, y - 80 + 64), fill=AMBER)   # cursor
++        y += 90
++    d.rectangle((160 + 8 * 30 + 3, y - 90 + 9, 160 + 9 * 30 - 3, y - 90 + 75), fill=AMBER)   # cursor
+     rgb = np.asarray(img, dtype=np.uint16)
+     px = (((rgb[..., 0] >> 3) << 11) | ((rgb[..., 1] >> 2) << 5) | (rgb[..., 2] >> 3)).astype("<u2")
+     try:
+diff --git a/device/downstream/s10-terminal/s10-term b/device/downstream/s10-terminal/s10-term
+index 61fc609fae..c4695fa8e3 100644
+--- a/device/downstream/s10-terminal/s10-term
++++ b/device/downstream/s10-terminal/s10-term
+@@ -20,11 +20,13 @@ export FBTERM_SCANLINES="$(cat /etc/s10-scanlines 2>/dev/null || echo 3)"
+ # ls, git and htop stay readable. 7 = text, 8 = dim, 12 = highlight (shared with tmux,
+ # the home screen and the on-screen keyboard).
+ palette='0;5;2;0 1;235;110;60 2;214;190;96 3;235;188;80 4;180;126;52 5;222;132;92
+-6;226;180;118 7;232;168;60 8;110;76;22 9;245;130;90 10;232;208;120 11;242;204;110
++6;226;180;118 7;244;178;64 8;128;88;26 9;245;130;90 10;232;208;120 11;242;204;110
+ 12;245;195;100 13;240;160;116 14;240;204;150 15;250;220;160'
+ seq=""
+ for c in $palette; do seq="$seq\033[3;$c}"; done
+ # S10 VT = VT323 plus box/block glyphs; JetBrains Mono fills in anything else.
++# Size 75 makes one font pixel exactly 3x3 screen pixels (48x24 cells); with anti-aliasing
++# off (61-s10-vt-crisp.conf) every edge is sharp and each scanline (period 3) falls once per font pixel.
+ # fbterm hands its child TERM=linux (8 colours); tmux must see TERM=fbterm (256 colours).
+-exec fbterm --screen-rotate="$rotate" --font-names="S10 VT,JetBrains Mono" --font-size=64 -- \
++exec fbterm --screen-rotate="$rotate" --font-names="S10 VT,JetBrains Mono" --font-size=75 -- \
+ 	sh -c "printf '$seq\033[2J'; TERM=fbterm exec tmux new -A -s main -n menu s10-menu"
+-- 
+2.53.0
+

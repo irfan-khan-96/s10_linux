@@ -1,7 +1,7 @@
 From c33913307e95d000449b8a44387783b98c35896c Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Sun, 1 Nov 2026 18:47:57 +0100
-Subject: [PATCH 15/45] fbterm: split man pages into -doc
+Subject: [PATCH 15/47] fbterm: split man pages into -doc
 
 ---
  main/fbterm/APKBUILD | 1 +

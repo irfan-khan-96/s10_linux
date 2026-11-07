@@ -1,7 +1,7 @@
 From da4fd08824e39982fce56b236f3ad268ea6139ac Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Sun, 1 Nov 2026 23:54:53 +0100
-Subject: [PATCH 27/45] s10-terminal: drop Syncthing, 85% charge limit,
+Subject: [PATCH 27/47] s10-terminal: drop Syncthing, 85% charge limit,
  reliable screen wake
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

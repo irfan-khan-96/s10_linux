@@ -1,7 +1,7 @@
 From 8907a709951f184a78534dece54c7addbaaaa26e Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Mon, 2 Nov 2026 02:23:23 +0100
-Subject: [PATCH 39/45] s10-terminal: block and line glyphs overshoot one VT
+Subject: [PATCH 39/47] s10-terminal: block and line glyphs overshoot one VT
  pixel (no seams at size 64)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

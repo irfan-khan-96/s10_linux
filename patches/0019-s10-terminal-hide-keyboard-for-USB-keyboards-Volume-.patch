@@ -1,7 +1,7 @@
 From a7451a44cb02b5a5df262ca928896f8a8f1edbb0 Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Sun, 1 Nov 2026 22:11:45 +0100
-Subject: [PATCH 19/45] s10-terminal: hide keyboard for USB keyboards, Volume
+Subject: [PATCH 19/47] s10-terminal: hide keyboard for USB keyboards, Volume
  Down toggle
 
 ---
