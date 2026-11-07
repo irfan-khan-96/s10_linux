@@ -1,0 +1,297 @@
+From bf75932b6a44ee470f59d1145fffb89e309d9c40 Mon Sep 17 00:00:00 2001
+From: khan <khan@localhost>
+Date: Sat, 7 Nov 2026 23:47:21 +0100
+Subject: [PATCH 52/52] s10-terminal r26: one writing app - start screen
+ (today's journal, new note, search, recent), journal moved into
+ ~/notes/journal, menu has a single write entry
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ device/downstream/s10-terminal/APKBUILD  |   8 +-
+ device/downstream/s10-terminal/s10-menu  |  18 +--
+ device/downstream/s10-terminal/s10-write |  46 ++++----
+ device/downstream/s10-terminal/write.lua | 138 ++++++++++++++++++++++-
+ 4 files changed, 168 insertions(+), 42 deletions(-)
+
+diff --git a/device/downstream/s10-terminal/APKBUILD b/device/downstream/s10-terminal/APKBUILD
+index dedcd9f47e..2e2cad684f 100644
+--- a/device/downstream/s10-terminal/APKBUILD
++++ b/device/downstream/s10-terminal/APKBUILD
+@@ -2,7 +2,7 @@
+ # setup that turns samsung-beyond1lte-downstream into a pocket terminal.
+ pkgname=s10-terminal
+ pkgver=1
+-pkgrel=25
++pkgrel=26
+ pkgdesc="Galaxy S10 pocket terminal: fbterm + tmux, on-screen keyboard, hardening"
+ url="https://postmarketos.org"
+ arch="aarch64"
+@@ -98,7 +98,7 @@ package() {
+ 
+ sha512sums="
+ 8dd79cccaa1ba2f89fed035b504267a7a135717aafdb140d398b6e5ff9f862cad4394baf35b3e6a91b7265bbf69c8ef3bfadd5b91ec921adc4a83866fabf0d19  s10-osk
+-d570dac984f191e8cc1f74d4edc86857bb9a1515099eee83a9884fdcbd52ec1bae3ab6b6b6fa97fcfd8da5b38512dbd1f1e32d730f3a5cc9dda5a6d4e30eab47  s10-menu
++66ec4d36d9592d37849335038ed8703e9a55bc35e9a16a23f6b2e818218fbaac8e870e0e241b13000db4da7f03f1d716df78cb6cb9f96b2495d938934c6c388c  s10-menu
+ 39bf55c1e453af330e2b67387113c32257da794aa9208ef2d8dcb5311a1c7dfc086387ad67bdb3d1076a9613abedf53450e515fbf1c6f6ed8e6da61b69fbd7b6  s10-status
+ 603b0ba74e8e825ef9ec4eb3c8c28e0286dad98c0a9c278e9ea9dd8177a4cde6ba1fc3b5463e4cb8980685acfb112dcf4443d9c1dda54cf74aa62d54cf109b0d  s10-splash
+ 5fe4dd6a2064be409b02483188d9beebd4ab3de1263a62ad2453dfa7d33dcf2494f2ff81860a8443a5db44e97a454f17f0e8b55be921ed85a28e3689c3a0ae9d  s10-splash.initd
+@@ -106,8 +106,8 @@ d570dac984f191e8cc1f74d4edc86857bb9a1515099eee83a9884fdcbd52ec1bae3ab6b6b6fa97fc
+ d8152bc08c65c19b05f917b7c967555df849b352fc45f8262ffff91f5ce72ca4225a8f1d07a283d481ec2d0c1deb60cd9907172578b27aa55651844001ef6ed5  s10-idle-blank.initd
+ e55cb17b1595cfffd58373f236501a788c4ab2ffc2967aa9a7e1dffa4b4d3dc6c02e0f8d993ec1581893f8be2801cbbfa5f4b7d7d146dae2cb97669b2349f995  s10-update
+ d135dab9c73bf9afabd99391496fcad72b93123b785fe4f4f302dbb0c8016278f81c60549d084db5331c89444d509dc8ff6d31af4c7e8d97fbe9284f0735bfb5  s10-awake
+-64e268136b408356f9cb1bf74253b5faf4540367145874dc6d7fd722d147e842b9aff1fc00e4117694816b12103d720571e98f39e4189f2c4563a02a75ae1c99  s10-write
+-4c1be4c7ea3fdc7c5032d093724560a9d4ea37518a8f5a631d351a1efa3f0f7da05cddb7475e8c5fd547301e03237125407a34c2459e4f23cc2de44ffbd15688  write.lua
++5d6bf6cebc10d7e3abc8333b4733cdd3b2bef2d5d8acc88e48f9017e3fa306eb6b0cc60da4a9f0de75954233df4385068e653cf6123fdd6ad795557ba27dde12  s10-write
++1dccf16f477ffdc98beca2e72a4e4441ef00e263af6d11729eb48ace2d76dd474cc8b7256181f01bfb2f897038fceb2e873729883944bd301efb554861c11342  write.lua
+ 819748d8304e750ef856f1ef35060d0f807f611c6110020701acee7a256c92a3cfb38eb79626c538c42adf2b15f810828a8c592020c8a45b6bc600229c75ab88  s10-idle-blank
+ f5b670528587d518a367b66ae15fd9b5583b7ad666e03051523cf56a1b007469fc5fad535f4d22b12106042e93352b07594ec6dbc4da50766b3757d6e103f12b  s10-touch-absfix
+ 0f06787cbb28a1e53659f3fd410c219d380e17ce771dbf52810bb4a2f246cabd0fde6fba34497bc33b87b21d81d8e368a668013741dced17c84c8b20340714ca  s10-osk-start
+diff --git a/device/downstream/s10-terminal/s10-menu b/device/downstream/s10-terminal/s10-menu
+index b488b36a6c..87d1138adb 100644
+--- a/device/downstream/s10-terminal/s10-menu
++++ b/device/downstream/s10-terminal/s10-menu
+@@ -8,20 +8,14 @@ import curses, datetime, os, socket, subprocess
+ HOME = os.path.expanduser("~")
+ 
+ def journal_path():
+-    return f"{HOME}/journal/{datetime.date.today():%Y-%m-%d}.md"
+-
+-def notes():
+-    os.makedirs(f"{HOME}/notes", exist_ok=True)
+-    return f"cd {HOME}/notes && nvim ."
++    return f"{HOME}/notes/journal/{datetime.date.today():%Y-%m-%d}.md"
+ 
+ ITEMS = [  # key, label, window name, command (str, or function returning one)
+-    ("1", "notes",   "notes",   notes),
+-    ("2", "journal", "journal", "s10-write"),          # writing mode: today's entry
+-    ("3", "write",   "write",   "s10-write --last"),   # writing mode: the last piece
+-    ("4", "shell",   None,      None),          # always a new shell window
+-    ("5", "system",  "system",  "htop"),
+-    ("6", "wi-fi",   "wifi",    "sudo nmtui"),
+-    ("7", "power",   None,      "power"),
++    ("1", "write",   "write",   "s10-write"),   # notes and journal: start screen
++    ("2", "shell",   None,      None),          # always a new shell window
++    ("3", "system",  "system",  "htop"),
++    ("4", "wi-fi",   "wifi",    "sudo nmtui"),
++    ("5", "power",   None,      "power"),
+ ]
+ 
+ # 3x5 block digits for the clock, each cell drawn two columns wide
+diff --git a/device/downstream/s10-terminal/s10-write b/device/downstream/s10-terminal/s10-write
+index c5e432c0b3..08df0fe825 100644
+--- a/device/downstream/s10-terminal/s10-write
++++ b/device/downstream/s10-terminal/s10-write
+@@ -1,29 +1,25 @@
+ #!/bin/sh
+-# Distraction-free writing in Neovim (setup in /usr/share/s10-terminal/write.lua).
+-#   s10-write            today's journal entry (~/journal/YYYY-MM-DD.md, dated heading if new)
+-#   s10-write --last     the file last opened here, else a new note in ~/notes
++# Writing: one place for notes and the journal, in distraction-free Neovim
++# (setup in /usr/share/s10-terminal/write.lua). Everything lives in ~/notes,
++# the journal in ~/notes/journal (one file per day).
++#   s10-write            start screen: today's journal, new note, search, recent pieces
++#   s10-write today      today's journal entry
+ #   s10-write <file>     any file
+-# Inside: Space s spell check, Space c centred column, Space w word count; autosaves.
+-state="${XDG_STATE_HOME:-$HOME/.local/state}/s10-write"
+-mkdir -p "$state"
++notes="$HOME/notes"
++mkdir -p "$notes/journal"
++# one-time move of the old ~/journal folder (never overwrites a file already there)
++if [ -d "$HOME/journal" ]; then
++	for f in "$HOME/journal"/* "$HOME/journal"/.[!.]*; do
++		[ -e "$f" ] || continue
++		[ -e "$notes/journal/${f##*/}" ] || mv "$f" "$notes/journal/"
++	done
++	rmdir "$HOME/journal" 2>/dev/null
++fi
++# NVIM_APPNAME: its own undo, swap and history, apart from the normal Neovim
++export NVIM_APPNAME=s10-write
++init=/usr/share/s10-terminal/write.lua
+ case "$1" in
+-"")
+-	mkdir -p "$HOME/journal"
+-	f="$HOME/journal/$(date +%F).md"
+-	[ -e "$f" ] || printf '# %s\n\n' "$(date '+%A %d %B %Y')" > "$f"
+-	;;
+---last)
+-	f="$(cat "$state/last" 2>/dev/null)"
+-	if [ -z "$f" ] || [ ! -e "$f" ]; then
+-		mkdir -p "$HOME/notes"
+-		f="$HOME/notes/$(date +%F-%H%M).md"
+-	fi
+-	;;
+-*)
+-	f="$1"
+-	;;
++"")     exec nvim -u "$init" ;;
++today)  exec nvim -u "$init" -c 'lua vim.g.s10_today = 1; S10Today()' ;;
++*)      exec nvim -u "$init" '+normal! G$' "$1" ;;
+ esac
+-case "$f" in /*) ;; *) f="$PWD/$f" ;; esac
+-printf '%s\n' "$f" > "$state/last"
+-# its own undo/swap/shada (NVIM_APPNAME), start at the end of the text
+-NVIM_APPNAME=s10-write exec nvim -u /usr/share/s10-terminal/write.lua '+normal! G$' "$f"
+diff --git a/device/downstream/s10-terminal/write.lua b/device/downstream/s10-terminal/write.lua
+index 9713687e6a..8a7bd3f507 100644
+--- a/device/downstream/s10-terminal/write.lua
++++ b/device/downstream/s10-terminal/write.lua
+@@ -1,7 +1,10 @@
+ -- s10-write: distraction-free writing in Neovim on the S10 terminal (amber, offline, no plugins).
+ -- Loaded with `nvim -u` by s10-write, so the normal Neovim setup is untouched.
+--- Space s: spell check on/off    Space c: centred column on/off    Space w: word count
++-- Start screen: t today's journal, n new note, / search, 1-9 recent pieces, q quit.
++-- While writing: Space h back to the start screen, Space s spell check on/off,
++-- Space c centred column on/off, Space w word count.
+ -- Text autosaves when you stop typing, leave insert mode or switch away; :q leaves.
++-- All writing lives in ~/notes, the journal in ~/notes/journal (one file per day).
+ 
+ local o, opt = vim.o, vim.opt
+ local COLUMN = 72                       -- text width when the screen is wide enough to centre
+@@ -78,6 +81,8 @@ vim.api.nvim_create_autocmd("ColorScheme", { callback = colours })
+ local words = 0
+ local function count() words = vim.fn.wordcount().words end
+ _G.S10Status = function()
++  if vim.b.s10_start then return "  write  ·  ~/notes" end
++  if vim.bo.buftype == "quickfix" then return "  search results  ·  Enter opens" end
+   local name = vim.fn.expand("%:t")
+   if name == "" then name = "untitled" end
+   local state = vim.bo.modified and "unsaved" or "saved"
+@@ -145,3 +150,134 @@ map("n", "<leader>w", function()
+   local wc = vim.fn.wordcount()
+   print(string.format("%d words, %d characters", wc.words, wc.chars))
+ end, { desc = "word count" })
++
++-- one place for all writing: start screen, today's journal, new notes, search, recent pieces
++local NOTES = vim.fn.expand("~/notes")
++local JOURNAL = NOTES .. "/journal"
++local spell_on = true
++
++local function open(path)
++  vim.cmd.edit(vim.fn.fnameescape(path))
++  vim.wo.spell = spell_on
++  vim.cmd("normal! G$")
++end
++
++_G.S10Today = function()
++  vim.fn.mkdir(JOURNAL, "p")
++  local path = JOURNAL .. "/" .. os.date("%Y-%m-%d") .. ".md"
++  if vim.fn.filereadable(path) == 0 then
++    vim.fn.writefile({ "# " .. os.date("%A %d %B %Y"), "" }, path)
++  end
++  open(path)
++end
++
++local function slug(title)
++  local s = title:lower():gsub("[^%w]+", "-"):gsub("^%-+", ""):gsub("%-+$", "")
++  return s:sub(1, 50)
++end
++
++local function new_note()
++  vim.ui.input({ prompt = "Title: " }, function(title)
++    if not title or title:match("^%s*$") then return end
++    local base = slug(title)
++    if base == "" then base = os.date("%Y-%m-%d-%H%M") end
++    local path, n = NOTES .. "/" .. base .. ".md", 2
++    while vim.fn.filereadable(path) == 1 do
++      path, n = NOTES .. "/" .. base .. "-" .. n .. ".md", n + 1
++    end
++    vim.fn.mkdir(NOTES, "p")
++    vim.fn.writefile({ "# " .. title, "" }, path)
++    open(path)
++  end)
++end
++
++local function search()
++  vim.ui.input({ prompt = "Search: " }, function(q)
++    if not q or q == "" then return end
++    vim.fn.setqflist({})
++    vim.cmd("silent! vimgrep /\\c\\V" .. vim.fn.escape(q, "/\\") .. "/j " .. vim.fn.fnameescape(NOTES) .. "/**/*.md")
++    if #vim.fn.getqflist() == 0 then
++      vim.notify("nothing found for " .. q)
++      return
++    end
++    vim.cmd("botright copen")
++  end)
++end
++vim.api.nvim_create_autocmd("FileType", {          -- search results: Enter opens and closes the list
++  pattern = "qf",
++  callback = function(ev)
++    vim.wo.spell = false
++    vim.keymap.set("n", "<CR>", "<CR><Cmd>cclose<CR><Cmd>lua vim.wo.spell = " .. tostring(spell_on) .. "<CR>",
++      { buffer = ev.buf })
++    vim.keymap.set("n", "q", "<Cmd>cclose<CR>", { buffer = ev.buf })
++  end,
++})
++
++local function title_of(path)
++  local first = vim.fn.readfile(path, "", 1)[1] or ""
++  local t = first:match("^#+%s*(.+)")
++  return t or vim.fn.fnamemodify(path, ":t:r")
++end
++
++local function recent(n)
++  local files = vim.fn.globpath(NOTES, "**/*.md", false, true)
++  table.sort(files, function(a, b) return vim.fn.getftime(a) > vim.fn.getftime(b) end)
++  return vim.list_slice(files, 1, n)
++end
++
++_G.S10Start = function()
++  local files = recent(9)
++  local width = math.min(o.columns, COLUMN) - 18
++  local lines = { "", "  WRITE", "",
++    "  t  today's journal   " .. os.date("%A %d %B"),
++    "  n  new note",
++    "  /  search all writing", "", "  recent" }
++  for i, f in ipairs(files) do
++    local where = f:sub(#JOURNAL + 1, #JOURNAL + 1) == "/" and f:sub(1, #JOURNAL) == JOURNAL and "journal" or "notes"
++    local title = title_of(f)
++    if #title > width then title = title:sub(1, width - 1) .. "…" end
++    lines[#lines + 1] = string.format("  %d  %-" .. width .. "s %s", i, title, where)
++  end
++  if #files == 0 then lines[#lines + 1] = "     nothing yet" end
++  lines[#lines + 1] = ""
++  lines[#lines + 1] = "  q  quit"
++
++  local buf = vim.api.nvim_create_buf(false, true)
++  vim.bo[buf].bufhidden = "wipe"
++  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
++  vim.bo[buf].modifiable = false
++  vim.b[buf].s10_start = true
++  vim.api.nvim_win_set_buf(0, buf)
++  vim.wo.spell = false
++  vim.api.nvim_win_set_cursor(0, { 4, 2 })
++  local function key(lhs, fn) vim.keymap.set("n", lhs, fn, { buffer = buf, nowait = true }) end
++  key("t", S10Today)
++  key("n", new_note)
++  key("/", search)
++  key("q", function() vim.cmd("qa") end)
++  for i, f in ipairs(files) do key(tostring(i), function() open(f) end) end
++  key("<CR>", function()                             -- Enter on a line does what its key does
++    local l = vim.api.nvim_get_current_line():match("^%s+(%S+)")
++    if l == "t" then S10Today() elseif l == "n" then new_note() elseif l == "/" then search()
++    elseif l == "q" then vim.cmd("qa") elseif tonumber(l) and files[tonumber(l)] then open(files[tonumber(l)]) end
++  end)
++  local ns = vim.api.nvim_create_namespace("s10-start")
++  local function paint(row, col, group)
++    vim.api.nvim_buf_set_extmark(buf, ns, row, col, { end_row = row, end_col = #lines[row + 1], hl_group = group })
++  end
++  paint(1, 0, "Title")                               -- WRITE
++  paint(7, 0, "Comment")                             -- recent
++  for i = 1, #files do                               -- where each piece lives, dimmed
++    paint(7 + i, #lines[8 + i] - #(lines[8 + i]:match("%S+$")), "Comment")
++  end
++end
++
++map("n", "<leader>h", function() vim.cmd("silent! update"); S10Start() end, { desc = "start screen" })
++map("n", "<leader>s", function() spell_on = not spell_on; vim.wo.spell = spell_on end, { desc = "spell check on/off" })
++
++-- no file given: the start screen
++vim.api.nvim_create_autocmd("VimEnter", {
++  callback = function()
++    if vim.fn.argc() == 0 and not vim.g.s10_today then S10Start() end
++  end,
++})
+-- 
+2.53.0
+

@@ -1,7 +1,7 @@
-From e92165b8b1f218b1e6731d3b483129c1a523f5c3 Mon Sep 17 00:00:00 2001
+From 3ba87c53e30379ddb6860650502c4054ba2e1957 Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Mon, 2 Nov 2026 01:22:03 +0100
-Subject: [PATCH 35/50] s10-terminal: brightness steps across the visible
+Subject: [PATCH 35/52] s10-terminal: brightness steps across the visible
  range, gentler night cap
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

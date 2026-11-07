@@ -1,7 +1,7 @@
-From dc7477f8488594415e2acfd79cbbcd600ba07751 Mon Sep 17 00:00:00 2001
+From 405d8b96943d0db8b7ece04dcc4eaea746de0695 Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Sat, 7 Nov 2026 18:39:40 +0100
-Subject: [PATCH 50/50] s10-terminal r24: Samba listens on all addresses (Wi-Fi
+Subject: [PATCH 50/52] s10-terminal r24: Samba listens on all addresses (Wi-Fi
  can come up after it), access still limited to the home network
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

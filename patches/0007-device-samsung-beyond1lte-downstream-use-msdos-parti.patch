@@ -1,7 +1,7 @@
-From b7702ac6e2fadf5158bb043b04c987cf23113346 Mon Sep 17 00:00:00 2001
+From 9e42b3585153a49d03456ae3bb8432da84772096 Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Sat, 31 Oct 2026 11:26:42 +0100
-Subject: [PATCH 07/50] device-samsung-beyond1lte-downstream: use msdos
+Subject: [PATCH 07/52] device-samsung-beyond1lte-downstream: use msdos
  partition table
 
 ---

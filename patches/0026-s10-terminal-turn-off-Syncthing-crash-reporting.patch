@@ -1,7 +1,7 @@
-From 2c1bb608a11d5fe45cf356c78eb65ba2f946b50d Mon Sep 17 00:00:00 2001
+From dbf28296e18ce23bf5ffd3bb3873c13c5c24162f Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Sun, 1 Nov 2026 23:32:02 +0100
-Subject: [PATCH 26/50] s10-terminal: turn off Syncthing crash reporting
+Subject: [PATCH 26/52] s10-terminal: turn off Syncthing crash reporting
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---

@@ -1,7 +1,7 @@
-From d48421952f3d45f290397b5e2017d10ecebf58c3 Mon Sep 17 00:00:00 2001
+From bf612c4c92881d1bcceae73eb3a41296ded9cc90 Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Sat, 7 Nov 2026 17:08:14 +0100
-Subject: [PATCH 49/50] s10-terminal r23: deep sleep off by default (Wi-Fi lost
+Subject: [PATCH 49/52] s10-terminal r23: deep sleep off by default (Wi-Fi lost
  after resume), Wi-Fi watchdog restarts Wi-Fi when the link or address is gone
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

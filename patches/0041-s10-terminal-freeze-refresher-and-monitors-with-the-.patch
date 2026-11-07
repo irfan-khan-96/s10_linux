@@ -1,7 +1,7 @@
-From dd75cba0750b2168cd231c14e5fc950f4e117083 Mon Sep 17 00:00:00 2001
+From f5e17d0d06068352998deff74ee3a006abfdd0fc Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Tue, 3 Nov 2026 14:20:40 +0100
-Subject: [PATCH 41/50] s10-terminal: freeze refresher and monitors with the
+Subject: [PATCH 41/52] s10-terminal: freeze refresher and monitors with the
  cgroup-v1 freezer (tmux undoes SIGSTOP; comm names are 15 chars)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

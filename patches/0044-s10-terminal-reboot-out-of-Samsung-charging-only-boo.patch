@@ -1,7 +1,7 @@
-From 6ffa934c12b4ed98a2834d4564cf586c244f0235 Mon Sep 17 00:00:00 2001
+From dfbc5c564031fe30a17585b92e64489a9e8b3b11 Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Fri, 6 Nov 2026 23:47:24 +0100
-Subject: [PATCH 44/50] s10-terminal: reboot out of Samsung charging-only boot
+Subject: [PATCH 44/52] s10-terminal: reboot out of Samsung charging-only boot
  (no touch); keyboard waits for the touchscreen
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

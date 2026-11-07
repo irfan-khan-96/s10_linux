@@ -1,7 +1,7 @@
-From d666f5095537ba0f846578745055d10b0af00ce9 Mon Sep 17 00:00:00 2001
+From ef4dd75af02768fc5375c8a07e39f476e910f50f Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Sat, 7 Nov 2026 00:34:26 +0100
-Subject: [PATCH 45/50] s10-terminal: s10-osk and s10-idle-blank as supervised
+Subject: [PATCH 45/52] s10-terminal: s10-osk and s10-idle-blank as supervised
  OpenRC services; s10-update (safe upgrade with checks)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

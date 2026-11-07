@@ -1,7 +1,7 @@
-From 3b923c98988347c1a3a0357a74ce7e5e9132e304 Mon Sep 17 00:00:00 2001
+From 8d6823877dbec07f74d15b1430f23ee33213764c Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Mon, 2 Nov 2026 00:26:53 +0100
-Subject: [PATCH 30/50] s10-terminal: landscape while a USB keyboard is plugged
+Subject: [PATCH 30/52] s10-terminal: landscape while a USB keyboard is plugged
  in
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

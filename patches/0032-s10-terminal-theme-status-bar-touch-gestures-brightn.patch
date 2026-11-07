@@ -1,7 +1,7 @@
-From e96ca2bac9a82140f518a8956992dcd06e9b3905 Mon Sep 17 00:00:00 2001
+From 297b1abd8b9b0048b8847efdb3047c5602ca5af0 Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Mon, 2 Nov 2026 00:52:13 +0100
-Subject: [PATCH 32/50] s10-terminal: theme, status bar, touch gestures,
+Subject: [PATCH 32/52] s10-terminal: theme, status bar, touch gestures,
  brightness and night mode, home screen, keyboard pop-ups, boot splash
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

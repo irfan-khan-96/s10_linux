@@ -1,7 +1,7 @@
-From 58af677ffadf523bc670ad33ece1b6a0ca146055 Mon Sep 17 00:00:00 2001
+From 893b01155de95305361e0558ea7331025b0a6dff Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Sat, 31 Oct 2026 14:17:20 +0100
-Subject: [PATCH 11/50] linux-samsung-beyond1lte-downstream: keep panel on when
+Subject: [PATCH 11/52] linux-samsung-beyond1lte-downstream: keep panel on when
  fb0 is closed
 
 ---

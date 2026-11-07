@@ -1,7 +1,7 @@
-From 4bfab2fb65cb1cc4b3946f14f7156b72038aff9e Mon Sep 17 00:00:00 2001
+From cb94d71a710a5a171b5a1ee3a10aa2d634ed7ce6 Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Sat, 7 Nov 2026 13:04:19 +0100
-Subject: [PATCH 48/50] s10-terminal r22: deep sleep with the screen off
+Subject: [PATCH 48/52] s10-terminal r22: deep sleep with the screen off
  (Wi-Fi, buttons and a 15-min clock wake it), s10-awake, Samba share and
  everyday tools packaged
 

@@ -1,7 +1,7 @@
-From ec8fedfc581302d5dbc07ec07bbff64dfe822774 Mon Sep 17 00:00:00 2001
+From 540737b824204303b7a97638b4724b1dd1e6dc6d Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Sun, 1 Nov 2026 18:43:36 +0100
-Subject: [PATCH 14/50] fbterm: musl compatibility patch
+Subject: [PATCH 14/52] fbterm: musl compatibility patch
 
 ---
  main/fbterm/APKBUILD          |  2 ++

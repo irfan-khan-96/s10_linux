@@ -1,7 +1,7 @@
-From d73c1f23f6cda377ba0baf96c5181bb1755a3d07 Mon Sep 17 00:00:00 2001
+From 4a39cde78aae4c4b42fde60edc0052bbf083025d Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Sat, 7 Nov 2026 12:46:05 +0100
-Subject: [PATCH 47/50] fbterm r5: place glyphs by their rendered bitmap (sharp
+Subject: [PATCH 47/52] fbterm r5: place glyphs by their rendered bitmap (sharp
  monochrome text)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

@@ -1,7 +1,7 @@
-From 2c34da8e890ec4f9b2150723cfdb59f4cdc8bbeb Mon Sep 17 00:00:00 2001
+From b21a91f449440a6a0b5157f5bed6b0b60ee50a85 Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Sat, 31 Oct 2026 09:17:20 +0100
-Subject: [PATCH 03/50] device-samsung-beyond1lte-downstream: use gzip
+Subject: [PATCH 03/52] device-samsung-beyond1lte-downstream: use gzip
  initramfs (no zstd in 4.14)
 
 ---

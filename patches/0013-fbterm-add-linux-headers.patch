@@ -1,7 +1,7 @@
-From 59339e3cbf6af3527f5a0c3b45d92aa2e76e9740 Mon Sep 17 00:00:00 2001
+From 71392e4cfb00caecf69076046fb38db337fa2e6b Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Sun, 1 Nov 2026 18:29:37 +0100
-Subject: [PATCH 13/50] fbterm: add linux-headers
+Subject: [PATCH 13/52] fbterm: add linux-headers
 
 ---
  main/fbterm/APKBUILD | 2 +-

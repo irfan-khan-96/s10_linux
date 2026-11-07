@@ -1,7 +1,7 @@
-From f756841202c992d00c55cccc731f6fc9a9a3b2c4 Mon Sep 17 00:00:00 2001
+From e77de354032a7dba0837be1729f99e776870443f Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Sat, 31 Oct 2026 12:44:55 +0100
-Subject: [PATCH 10/50] device-samsung-beyond1lte-downstream: gzip
+Subject: [PATCH 10/52] device-samsung-beyond1lte-downstream: gzip
  initramfs-extra
 
 ---

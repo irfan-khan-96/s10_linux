@@ -1,7 +1,7 @@
-From 4c891549af76f978cbf07c3023792521c9907056 Mon Sep 17 00:00:00 2001
+From 5e8a9db7d3db0a59666783cb19a1319e6266abcb Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Mon, 2 Nov 2026 00:14:57 +0100
-Subject: [PATCH 29/50] s10-terminal: no gettys on tty2-6, so the console
+Subject: [PATCH 29/52] s10-terminal: no gettys on tty2-6, so the console
  cannot switch away from fbterm
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
