@@ -1,0 +1,10 @@
+#!/bin/sh
+# Keep the phone out of deep sleep while a command runs, e.g. s10-awake apk fetch ...
+# (with the screen off the phone otherwise suspends whenever the network is quiet,
+# which pauses everything until a packet, a button or the 15-minute clock wakes it).
+[ $# -gt 0 ] || { echo "usage: s10-awake <command> [args...]"; exit 2; }
+hold="/run/s10-stay-awake/$(id -un).$$"
+: > "$hold" || exit 1
+trap 'rm -f "$hold"' EXIT
+trap 'exit 130' INT TERM HUP
+"$@"

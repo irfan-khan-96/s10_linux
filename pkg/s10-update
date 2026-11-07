@@ -34,7 +34,7 @@ ok() { echo "    ok   $1"; }
 bad() { echo "    FIX  $1"; }
 grep -q '^tty1::respawn:.*s10-term' /etc/inittab && ok "terminal on tty1" || bad "tty1 line in /etc/inittab (reinstall s10-terminal)"
 grep -q '^tty[2-6]::' /etc/inittab && bad "logins on tty2-6 came back (reinstall s10-terminal)" || ok "no logins on tty2-6"
-for s in s10-osk s10-idle-blank msm-fb-refresher sshd networkmanager; do
+for s in s10-osk s10-idle-blank msm-fb-refresher sshd networkmanager samba; do
 	rc-service -q "$s" status >/dev/null 2>&1 && ok "$s running" || bad "$s not running: rc-service $s start"
 done
 [ -e /etc/ssh/sshd_config.d/10-hardening.conf ] && ok "SSH hardening in place" || bad "SSH hardening missing"

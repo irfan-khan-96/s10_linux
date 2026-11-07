@@ -16,6 +16,14 @@ if [ -n "$user" ]; then
 	# no logins on tty2-6: nothing displays them, and switching there leaves fbterm without input
 	sed -i "s|^tty[2-6]::|#&|" /etc/inittab
 	kill -HUP 1 2>/dev/null
+	# home file share: our config (the stock one stays as smb.conf.orig), its folder, the
+	# service. The Samba password is set by hand once: sudo smbpasswd -a <user>
+	if ! grep -q "S10 home file share" /etc/samba/smb.conf 2>/dev/null; then
+		[ -f /etc/samba/smb.conf ] && [ ! -f /etc/samba/smb.conf.orig ] && cp /etc/samba/smb.conf /etc/samba/smb.conf.orig
+		sed "s/@USER@/$user/g" /usr/share/s10-terminal/smb.conf > /etc/samba/smb.conf
+	fi
+	install -d -o "$user" -g "$user" "/home/$user/share"
+	rc-update -q add samba default
 fi
 rc-update -q del s10-syncthing default 2>/dev/null
 fc-cache -f /usr/share/fonts/s10-vt >/dev/null 2>&1
