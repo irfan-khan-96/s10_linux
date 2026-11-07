@@ -10,22 +10,14 @@ HOME = os.path.expanduser("~")
 def journal_path():
     return f"{HOME}/journal/{datetime.date.today():%Y-%m-%d}.md"
 
-def journal_today():
-    os.makedirs(f"{HOME}/journal", exist_ok=True)
-    path = journal_path()
-    if not os.path.exists(path):
-        with open(path, "w") as f:
-            f.write(f"# {datetime.date.today():%A %d %B %Y}\n\n")
-    return f"nvim + {path}"
-
 def notes():
     os.makedirs(f"{HOME}/notes", exist_ok=True)
     return f"cd {HOME}/notes && nvim ."
 
 ITEMS = [  # key, label, window name, command (str, or function returning one)
     ("1", "notes",   "notes",   notes),
-    ("2", "journal", "journal", journal_today),
-    ("3", "write",   "write",   "wordgrinder"),
+    ("2", "journal", "journal", "s10-write"),          # writing mode: today's entry
+    ("3", "write",   "write",   "s10-write --last"),   # writing mode: the last piece
     ("4", "shell",   None,      None),          # always a new shell window
     ("5", "system",  "system",  "htop"),
     ("6", "wi-fi",   "wifi",    "sudo nmtui"),

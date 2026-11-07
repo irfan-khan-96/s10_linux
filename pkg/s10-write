@@ -1,0 +1,29 @@
+#!/bin/sh
+# Distraction-free writing in Neovim (setup in /usr/share/s10-terminal/write.lua).
+#   s10-write            today's journal entry (~/journal/YYYY-MM-DD.md, dated heading if new)
+#   s10-write --last     the file last opened here, else a new note in ~/notes
+#   s10-write <file>     any file
+# Inside: Space s spell check, Space c centred column, Space w word count; autosaves.
+state="${XDG_STATE_HOME:-$HOME/.local/state}/s10-write"
+mkdir -p "$state"
+case "$1" in
+"")
+	mkdir -p "$HOME/journal"
+	f="$HOME/journal/$(date +%F).md"
+	[ -e "$f" ] || printf '# %s\n\n' "$(date '+%A %d %B %Y')" > "$f"
+	;;
+--last)
+	f="$(cat "$state/last" 2>/dev/null)"
+	if [ -z "$f" ] || [ ! -e "$f" ]; then
+		mkdir -p "$HOME/notes"
+		f="$HOME/notes/$(date +%F-%H%M).md"
+	fi
+	;;
+*)
+	f="$1"
+	;;
+esac
+case "$f" in /*) ;; *) f="$PWD/$f" ;; esac
+printf '%s\n' "$f" > "$state/last"
+# its own undo/swap/shada (NVIM_APPNAME), start at the end of the text
+NVIM_APPNAME=s10-write exec nvim -u /usr/share/s10-terminal/write.lua '+normal! G$' "$f"

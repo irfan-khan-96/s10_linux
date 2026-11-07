@@ -2,7 +2,7 @@
 # setup that turns samsung-beyond1lte-downstream into a pocket terminal.
 pkgname=s10-terminal
 pkgver=1
-pkgrel=24
+pkgrel=25
 pkgdesc="Galaxy S10 pocket terminal: fbterm + tmux, on-screen keyboard, hardening"
 url="https://postmarketos.org"
 arch="aarch64"
@@ -43,6 +43,8 @@ source="
 	s10-idle-blank.initd
 	s10-update
 	s10-awake
+	s10-write
+	write.lua
 	s10-idle-blank
 	s10-touch-absfix
 	s10-osk-start
@@ -66,7 +68,7 @@ source="
 	"
 
 package() {
-	for f in s10-osk s10-menu s10-update s10-awake s10-status s10-splash s10-idle-blank s10-touch-absfix s10-osk-start s10-term; do
+	for f in s10-osk s10-menu s10-update s10-awake s10-write s10-status s10-splash s10-idle-blank s10-touch-absfix s10-osk-start s10-term; do
 		install -Dm755 "$srcdir/$f" "$pkgdir/usr/bin/$f"
 	done
 	install -Dm755 "$srcdir"/s10-splash.initd "$pkgdir"/etc/init.d/s10-splash
@@ -79,6 +81,7 @@ package() {
 	install -Dm644 "$srcdir"/fbtermrc "$pkgdir"/usr/share/s10-terminal/fbtermrc
 	install -Dm644 "$srcdir"/tmux.conf "$pkgdir"/etc/tmux.conf
 	install -Dm644 "$srcdir"/smb.conf "$pkgdir"/usr/share/s10-terminal/smb.conf
+	install -Dm644 "$srcdir"/write.lua "$pkgdir"/usr/share/s10-terminal/write.lua
 	for f in 05-s10-lpm 10-firewall 20-display-on 30-usb-dhcp 40-s10-tuning 45-s10-battery; do
 		install -Dm755 "$srcdir/$f.start" "$pkgdir/etc/local.d/$f.start"
 	done
@@ -95,7 +98,7 @@ package() {
 
 sha512sums="
 8dd79cccaa1ba2f89fed035b504267a7a135717aafdb140d398b6e5ff9f862cad4394baf35b3e6a91b7265bbf69c8ef3bfadd5b91ec921adc4a83866fabf0d19  s10-osk
-7978663b06fd47636c689e0d2769e706bf37bb475b9b9b190193ec186f2a7697468a969c984af242f4b892754d907918d8a0a7b24300bae7465e76607dc380ee  s10-menu
+d570dac984f191e8cc1f74d4edc86857bb9a1515099eee83a9884fdcbd52ec1bae3ab6b6b6fa97fcfd8da5b38512dbd1f1e32d730f3a5cc9dda5a6d4e30eab47  s10-menu
 39bf55c1e453af330e2b67387113c32257da794aa9208ef2d8dcb5311a1c7dfc086387ad67bdb3d1076a9613abedf53450e515fbf1c6f6ed8e6da61b69fbd7b6  s10-status
 603b0ba74e8e825ef9ec4eb3c8c28e0286dad98c0a9c278e9ea9dd8177a4cde6ba1fc3b5463e4cb8980685acfb112dcf4443d9c1dda54cf74aa62d54cf109b0d  s10-splash
 5fe4dd6a2064be409b02483188d9beebd4ab3de1263a62ad2453dfa7d33dcf2494f2ff81860a8443a5db44e97a454f17f0e8b55be921ed85a28e3689c3a0ae9d  s10-splash.initd
@@ -103,6 +106,8 @@ sha512sums="
 d8152bc08c65c19b05f917b7c967555df849b352fc45f8262ffff91f5ce72ca4225a8f1d07a283d481ec2d0c1deb60cd9907172578b27aa55651844001ef6ed5  s10-idle-blank.initd
 e55cb17b1595cfffd58373f236501a788c4ab2ffc2967aa9a7e1dffa4b4d3dc6c02e0f8d993ec1581893f8be2801cbbfa5f4b7d7d146dae2cb97669b2349f995  s10-update
 d135dab9c73bf9afabd99391496fcad72b93123b785fe4f4f302dbb0c8016278f81c60549d084db5331c89444d509dc8ff6d31af4c7e8d97fbe9284f0735bfb5  s10-awake
+64e268136b408356f9cb1bf74253b5faf4540367145874dc6d7fd722d147e842b9aff1fc00e4117694816b12103d720571e98f39e4189f2c4563a02a75ae1c99  s10-write
+4c1be4c7ea3fdc7c5032d093724560a9d4ea37518a8f5a631d351a1efa3f0f7da05cddb7475e8c5fd547301e03237125407a34c2459e4f23cc2de44ffbd15688  write.lua
 819748d8304e750ef856f1ef35060d0f807f611c6110020701acee7a256c92a3cfb38eb79626c538c42adf2b15f810828a8c592020c8a45b6bc600229c75ab88  s10-idle-blank
 f5b670528587d518a367b66ae15fd9b5583b7ad666e03051523cf56a1b007469fc5fad535f4d22b12106042e93352b07594ec6dbc4da50766b3757d6e103f12b  s10-touch-absfix
 0f06787cbb28a1e53659f3fd410c219d380e17ce771dbf52810bb4a2f246cabd0fde6fba34497bc33b87b21d81d8e368a668013741dced17c84c8b20340714ca  s10-osk-start
