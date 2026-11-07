@@ -15,8 +15,14 @@
 # awake. The kernel itself refuses to suspend while Wi-Fi traffic is in flight, so an
 # active SSH or Samba session keeps it up; a new packet from the network, a button or the
 # clock (every 15 min, for the battery log and low-battery check) wakes it. Touch does not
-# wake it from sleep; a button does. "0" in /etc/s10-deep-sleep turns sleep off;
-# s10-awake <command> keeps the phone up while a long job runs.
+# wake it from sleep; a button does. Off unless /etc/s10-deep-sleep holds "1": on this
+# kernel the Wi-Fi driver can come back from a suspend without its connection (measured
+# 2026-11-07: Wi-Fi lost within an hour, and no battery gained). s10-awake <command> keeps
+# the phone up while a long job runs.
+#
+# Wi-Fi watchdog: the Broadcom driver sometimes restarts its firmware ("wl down/up") and
+# NetworkManager keeps reporting "connected" with no link and no address. Every minute,
+# if wlan0 has no link or no IPv4 address twice in a row, Wi-Fi is switched off and on.
 import glob, os, select, struct, subprocess, time
 
 IDLE = int(os.environ.get("S10_IDLE_SECONDS", "120"))
@@ -123,7 +129,7 @@ def set_blank(off, cycle=True):
 def suspend(seconds):
     '''Suspend to RAM with a clock wake-up in `seconds`. Returns True once awake again;
     False if the kernel refused (a wakeup source was active) or sleep is off or held.'''
-    if read(SLEEP_SETTING, "1") == "0":
+    if read(SLEEP_SETTING, "0") != "1":
         return False
     try:
         if os.listdir(STAY_AWAKE):
@@ -140,6 +146,30 @@ def suspend(seconds):
         return False
     finally:
         write(RTC_ALARM, "0")
+
+wifi_bad = 0
+
+def wifi_check():
+    '''Restart Wi-Fi when it is meant to be up but has no link or no IPv4 address.'''
+    global wifi_bad
+    if read("/sys/class/net/wlan0/operstate") is None:
+        return                                 # no Wi-Fi device (yet)
+    radio = subprocess.run(["nmcli", "-t", "radio", "wifi"], capture_output=True, text=True).stdout.strip()
+    if radio != "enabled":
+        wifi_bad = 0
+        return
+    link = subprocess.run(["iw", "dev", "wlan0", "link"], capture_output=True, text=True).stdout
+    addr = subprocess.run(["ip", "-4", "-o", "addr", "show", "wlan0"], capture_output=True, text=True).stdout
+    wifi_bad = wifi_bad + 1 if ("Connected to" not in link or " inet " not in addr) else 0
+    if wifi_bad >= 2:
+        log_line("wifi: no link or address, restarting Wi-Fi")
+        run("nmcli", "radio", "wifi", "off")
+        time.sleep(3)
+        run("nmcli", "radio", "wifi", "on")
+        wifi_bad = -3                          # give it 3 more minutes to reconnect
+
+def log_line(msg):
+    print(f"{time.strftime('%Y-%m-%d %H:%M:%S')} {msg}", flush=True)
 
 def log_power():
     # this fuel gauge reports current_avg in mA (negative while discharging)
@@ -165,13 +195,15 @@ os.makedirs(STAY_AWAKE, exist_ok=True)
 os.chmod(STAY_AWAKE, 0o1777)                   # any user's s10-awake can hold it
 fds, blanked, last, next_log = {}, False, clock(), 0
 next_sleep = 0
+next_wifi_check = clock() + 120               # let NetworkManager connect after boot
 dimmed = None  # brightness to restore while dimmed
 set_blank(False, cycle=False)
 power_saving(False)
 while True:
     open_inputs(fds)  # pick up hot-plugged keyboards
     # screen off: wake rarely (input still wakes select at once)
-    ready, _, _ = select.select(list(fds.values()), [], [], RETRY if blanked else 1)
+    sleepy = blanked and read(SLEEP_SETTING, "0") == "1"
+    ready, _, _ = select.select(list(fds.values()), [], [], (RETRY if sleepy else 60) if blanked else 1)
     activity = power = False
     for fd in ready:
         try:
@@ -225,6 +257,9 @@ while True:
             log_power()
             run("poweroff")
         next_log = now + (LOG_EVERY if blanked else 300)
+    if now >= next_wifi_check:
+        wifi_check()
+        next_wifi_check = now + 60
     if blanked and not activity and now >= next_sleep:
         if suspend(next_log - now):
             next_sleep = clock() + AWAKE_AFTER_WAKE
