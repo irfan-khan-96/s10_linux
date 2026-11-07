@@ -7,7 +7,7 @@ S=/mnt/c/Users/irfan/Desktop/s10-postmarketos/pkg
 P=~/.local/var/pmbootstrap/cache_git/pmaports/device/downstream/s10-terminal
 sed -i "s/^pkgrel=[0-9]*$/pkgrel=$1/" "$S/APKBUILD"
 bash "$T/check-pkg.sh" | grep -v ' ok ' || true
-rm -rf "$P"/* && cp -r "$S"/. "$P"/ && chmod 644 "$P"/* && rm -rf "$P/__pycache__"
+chmod -R u+rwX "$P" && rm -rf "$P"/* && cp "$S"/* "$P"/ && chmod 644 "$P"/*   # files only, no __pycache__
 python3 "$T/resum.py" "$P" >/dev/null
 cp "$P/APKBUILD" "$S/APKBUILD"
 cd "$P/../../.."

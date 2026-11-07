@@ -2,7 +2,7 @@
 # setup that turns samsung-beyond1lte-downstream into a pocket terminal.
 pkgname=s10-terminal
 pkgver=1
-pkgrel=20
+pkgrel=21
 pkgdesc="Galaxy S10 pocket terminal: fbterm + tmux, on-screen keyboard, hardening"
 url="https://postmarketos.org"
 arch="aarch64"
@@ -51,6 +51,7 @@ source="
 	wifi-powersave-off.conf
 	sshd-hardening.conf
 	S10VT-Regular.ttf
+	61-s10-vt-crisp.conf
 	OFL-VT323.txt
 	"
 
@@ -63,6 +64,7 @@ package() {
 	install -Dm755 "$srcdir"/s10-idle-blank.initd "$pkgdir"/etc/init.d/s10-idle-blank
 	# S10 VT: VT323 (OFL-1.1) plus box/block glyphs, built by tools/build-font.py
 	install -Dm644 "$srcdir"/S10VT-Regular.ttf "$pkgdir"/usr/share/fonts/s10-vt/S10VT-Regular.ttf
+	install -Dm644 "$srcdir"/61-s10-vt-crisp.conf "$pkgdir"/etc/fonts/conf.d/61-s10-vt-crisp.conf
 	install -Dm644 "$srcdir"/OFL-VT323.txt "$pkgdir"/usr/share/licenses/$pkgname/OFL-VT323.txt
 	install -Dm644 "$srcdir"/fbtermrc "$pkgdir"/usr/share/s10-terminal/fbtermrc
 	install -Dm644 "$srcdir"/tmux.conf "$pkgdir"/etc/tmux.conf
@@ -81,10 +83,10 @@ package() {
 }
 
 sha512sums="
-1272b8fc66197afe0aa7c19c4831b5f015269d6019489b1beef85853ae637029f7e1e637b43298918a5a3b01af27b696c9c8eb28d7ae4acf113e4930e488fda7  s10-osk
+8dd79cccaa1ba2f89fed035b504267a7a135717aafdb140d398b6e5ff9f862cad4394baf35b3e6a91b7265bbf69c8ef3bfadd5b91ec921adc4a83866fabf0d19  s10-osk
 7978663b06fd47636c689e0d2769e706bf37bb475b9b9b190193ec186f2a7697468a969c984af242f4b892754d907918d8a0a7b24300bae7465e76607dc380ee  s10-menu
 39bf55c1e453af330e2b67387113c32257da794aa9208ef2d8dcb5311a1c7dfc086387ad67bdb3d1076a9613abedf53450e515fbf1c6f6ed8e6da61b69fbd7b6  s10-status
-2ad64dddbc4290cb8b1fe600ae686891f25ed5c589263c40027fadb460eba5755fd48de5ed57cf09f02d51dc0f8d442a6915ca77386422f4c03dec2a3f45fd5f  s10-splash
+603b0ba74e8e825ef9ec4eb3c8c28e0286dad98c0a9c278e9ea9dd8177a4cde6ba1fc3b5463e4cb8980685acfb112dcf4443d9c1dda54cf74aa62d54cf109b0d  s10-splash
 5fe4dd6a2064be409b02483188d9beebd4ab3de1263a62ad2453dfa7d33dcf2494f2ff81860a8443a5db44e97a454f17f0e8b55be921ed85a28e3689c3a0ae9d  s10-splash.initd
 04fb5bc314ae3da0142ee8e8d592451edf924ecbcd63b4c7ba9a3659ac78500848735e27df90b2a5546d575b0b3154f996ed23dc5299cefeabff971f74f5df3c  s10-osk.initd
 d8152bc08c65c19b05f917b7c967555df849b352fc45f8262ffff91f5ce72ca4225a8f1d07a283d481ec2d0c1deb60cd9907172578b27aa55651844001ef6ed5  s10-idle-blank.initd
@@ -92,7 +94,7 @@ d8152bc08c65c19b05f917b7c967555df849b352fc45f8262ffff91f5ce72ca4225a8f1d07a283d4
 1a9addc1421ebc8e2699a2400e72ed486fdcf19b2854c15a8d829f9b4d775120c9e8ef80e4a2240d099c6e0d493b66fc9e37d957ba417652c95dd2b715333500  s10-idle-blank
 f5b670528587d518a367b66ae15fd9b5583b7ad666e03051523cf56a1b007469fc5fad535f4d22b12106042e93352b07594ec6dbc4da50766b3757d6e103f12b  s10-touch-absfix
 0f06787cbb28a1e53659f3fd410c219d380e17ce771dbf52810bb4a2f246cabd0fde6fba34497bc33b87b21d81d8e368a668013741dced17c84c8b20340714ca  s10-osk-start
-00e1c13c89a90739e66e37368cfc7fb9fad81b60ccedb84c2826948f77924aee8907aa227b0e845f09e2ca5331625d08769c0e63beae7bbae8360ce319808e2f  s10-term
+36d095a1c678b8107859007b4c34c45ffea2e07a06e6fbaed3616736f13e0e556fffecf69bce551f39fbea00073ea6a4687ea5726c7f61946918ac1849e87896  s10-term
 57a90c056354401584f280ba2e94483dd08dc89fbbd643626f04a1d121ddd0c6a180efb477d863ecd4b2da95325ca8576d355c4467a774c39a08f594978e2675  fbtermrc
 fd54415383f1a8009f3dd726b40dba7dcc4a2f655ecdd6a076cce1de0ecdd2743c5c52ecf0d6b8148b24b9d7284063fd99effd4ea0fc5958073cb1b017b719af  tmux.conf
 c433073ec72b77dbcf13882f7fd92a5915fee1fe3dd3db60fc1e966de7a694e5c63a3b0e2f30689815ae8242d26c2f8807664a9d6c1bcac9d423ff8cd0561f17  05-s10-lpm.start
@@ -106,5 +108,6 @@ a484b168fdd2edfa58d0cfeab44448ec0d019ef4c27f4a24057be8bf7842c0a3447c847dc2e45353
 8692b03ef5951179e8e2d622285925d8db9ec1999fe71c5611a37ba67f7c44b209c44ae4f467dfb3bb96f4b3257a243dc3060bf73e218d372fd06ca31e9e8de0  wifi-powersave-off.conf
 8390ae37016c3ba3cedf73b63c343c2eaf1329ba56b196f24cb58e5e0dfcff6850c60005792e36948fc14361748ea91a00341cf28c90f9e172e0c91e9afd0622  sshd-hardening.conf
 7bd947594bb4cca1675d4ae626726c65020fc37ac36759409088e935d5fa083c5d8b25b4f0dd84c98c0b523cbdf6c86ea45ac18a4f8b1a58fe77a37bcb9edb47  S10VT-Regular.ttf
+14e03c63ffed4daabbc51b9f8558c7886a47755cc44a917af360e016e2fb9a402f8f7d7eddace120fd6884e84c9f502efa536fda508e4f57bc328b5969ad5cb1  61-s10-vt-crisp.conf
 bb8e29450b4017b1092e674c20e0ab7ffd6161790627bfdea332a2433706c9d14d13311a229a341f77acf43cf1329a2889770a323986fceea8cea21c0f0828ad  OFL-VT323.txt
 "

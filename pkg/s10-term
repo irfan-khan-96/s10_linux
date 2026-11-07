@@ -20,11 +20,13 @@ export FBTERM_SCANLINES="$(cat /etc/s10-scanlines 2>/dev/null || echo 3)"
 # ls, git and htop stay readable. 7 = text, 8 = dim, 12 = highlight (shared with tmux,
 # the home screen and the on-screen keyboard).
 palette='0;5;2;0 1;235;110;60 2;214;190;96 3;235;188;80 4;180;126;52 5;222;132;92
-6;226;180;118 7;232;168;60 8;110;76;22 9;245;130;90 10;232;208;120 11;242;204;110
+6;226;180;118 7;244;178;64 8;128;88;26 9;245;130;90 10;232;208;120 11;242;204;110
 12;245;195;100 13;240;160;116 14;240;204;150 15;250;220;160'
 seq=""
 for c in $palette; do seq="$seq\033[3;$c}"; done
 # S10 VT = VT323 plus box/block glyphs; JetBrains Mono fills in anything else.
+# Size 75 makes one font pixel exactly 3x3 screen pixels (48x24 cells); with anti-aliasing
+# off (61-s10-vt-crisp.conf) every edge is sharp and each scanline (period 3) falls once per font pixel.
 # fbterm hands its child TERM=linux (8 colours); tmux must see TERM=fbterm (256 colours).
-exec fbterm --screen-rotate="$rotate" --font-names="S10 VT,JetBrains Mono" --font-size=64 -- \
+exec fbterm --screen-rotate="$rotate" --font-names="S10 VT,JetBrains Mono" --font-size=75 -- \
 	sh -c "printf '$seq\033[2J'; TERM=fbterm exec tmux new -A -s main -n menu s10-menu"
