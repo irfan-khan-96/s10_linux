@@ -18,9 +18,10 @@ if [ -n "$user" ]; then
 	kill -HUP 1 2>/dev/null
 	# home file share: our config (the stock one stays as smb.conf.orig), its folder, the
 	# service. The Samba password is set by hand once: sudo smbpasswd -a <user>
-	if ! grep -q "S10 home file share" /etc/samba/smb.conf 2>/dev/null; then
+	if ! grep -q "S10 home file share v2" /etc/samba/smb.conf 2>/dev/null; then
 		[ -f /etc/samba/smb.conf ] && [ ! -f /etc/samba/smb.conf.orig ] && cp /etc/samba/smb.conf /etc/samba/smb.conf.orig
 		sed "s/@USER@/$user/g" /usr/share/s10-terminal/smb.conf > /etc/samba/smb.conf
+		rc-service -q samba status && rc-service -q samba restart
 	fi
 	install -d -o "$user" -g "$user" "/home/$user/share"
 	rc-update -q add samba default
