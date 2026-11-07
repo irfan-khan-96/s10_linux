@@ -3,6 +3,8 @@
 # forget the old SSH host key, put the newest home backup back, then set the Wi-Fi and the
 # Samba password (both asked for on the phone's side, nothing stored here).
 set -e
+# works from WSL or Git Bash (WSL has no USERPROFILE)
+[ -n "$USERPROFILE" ] && [ -d "$USERPROFILE" ] || USERPROFILE=/mnt/c/Users/irfan
 USB=(-o HostName=172.16.42.1 -o ConnectTimeout=5)
 BACKUPS="$USERPROFILE/S10-backups"
 ssh-keygen -R 192.168.178.32 >/dev/null 2>&1 || true
