@@ -1,7 +1,7 @@
 From 7e8b9186f29f0f39e43cf5a7735360f9d662bfd8 Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Mon, 2 Nov 2026 01:07:02 +0100
-Subject: [PATCH 33/47] fbterm: rebuild fill colours when palette entries
+Subject: [PATCH 33/50] fbterm: rebuild fill colours when palette entries
  change
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

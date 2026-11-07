@@ -1,7 +1,7 @@
 From b7c0b16e2da1d6a76fe4717794ff9e33dd5eab4d Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Sat, 31 Oct 2026 09:42:17 +0100
-Subject: [PATCH 05/47] device-samsung-beyond1lte-downstream: use 512-byte
+Subject: [PATCH 05/50] device-samsung-beyond1lte-downstream: use 512-byte
  rootfs sectors (4.14 loop partscan)
 
 ---

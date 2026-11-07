@@ -1,7 +1,7 @@
 From 12510ee3d050fb267c8ef732ad900dadb51e1f51 Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Sat, 7 Nov 2026 12:35:59 +0100
-Subject: [PATCH 46/47] s10-terminal r21: crisp look (font 75 = 3 px per font
+Subject: [PATCH 46/50] s10-terminal r21: crisp look (font 75 = 3 px per font
  pixel, no anti-aliasing, brighter amber)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

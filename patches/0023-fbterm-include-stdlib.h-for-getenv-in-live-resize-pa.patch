@@ -1,7 +1,7 @@
 From b01a2c456108f32064bf5b6b43b07273f952f0b2 Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Sun, 1 Nov 2026 22:54:42 +0100
-Subject: [PATCH 23/47] fbterm: include stdlib.h for getenv in live-resize
+Subject: [PATCH 23/50] fbterm: include stdlib.h for getenv in live-resize
  patch
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

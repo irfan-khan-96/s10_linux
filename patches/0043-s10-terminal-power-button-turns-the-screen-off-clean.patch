@@ -1,7 +1,7 @@
 From c77e0105122eefde3940b18e96c18f179251116e Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Fri, 6 Nov 2026 23:19:56 +0100
-Subject: [PATCH 43/47] s10-terminal: power button turns the screen off; clean
+Subject: [PATCH 43/50] s10-terminal: power button turns the screen off; clean
  poweroff at 3% battery; power log current in mA
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

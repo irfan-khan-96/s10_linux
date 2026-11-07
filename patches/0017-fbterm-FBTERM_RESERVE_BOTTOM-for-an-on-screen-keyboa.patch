@@ -1,7 +1,7 @@
 From 115b4b919d22b706789bd101f98e30608a573c8d Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Sun, 1 Nov 2026 19:22:54 +0100
-Subject: [PATCH 17/47] fbterm: FBTERM_RESERVE_BOTTOM for an on-screen keyboard
+Subject: [PATCH 17/50] fbterm: FBTERM_RESERVE_BOTTOM for an on-screen keyboard
 
 ---
  main/fbterm/APKBUILD             |  4 +++-

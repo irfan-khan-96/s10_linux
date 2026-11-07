@@ -1,0 +1,125 @@
+From d48421952f3d45f290397b5e2017d10ecebf58c3 Mon Sep 17 00:00:00 2001
+From: khan <khan@localhost>
+Date: Sat, 7 Nov 2026 17:08:14 +0100
+Subject: [PATCH 49/50] s10-terminal r23: deep sleep off by default (Wi-Fi lost
+ after resume), Wi-Fi watchdog restarts Wi-Fi when the link or address is gone
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ device/downstream/s10-terminal/APKBUILD       |  4 +-
+ device/downstream/s10-terminal/s10-idle-blank | 43 +++++++++++++++++--
+ 2 files changed, 41 insertions(+), 6 deletions(-)
+
+diff --git a/device/downstream/s10-terminal/APKBUILD b/device/downstream/s10-terminal/APKBUILD
+index 44a28e08c4..cfcbecb3a4 100644
+--- a/device/downstream/s10-terminal/APKBUILD
++++ b/device/downstream/s10-terminal/APKBUILD
+@@ -2,7 +2,7 @@
+ # setup that turns samsung-beyond1lte-downstream into a pocket terminal.
+ pkgname=s10-terminal
+ pkgver=1
+-pkgrel=22
++pkgrel=23
+ pkgdesc="Galaxy S10 pocket terminal: fbterm + tmux, on-screen keyboard, hardening"
+ url="https://postmarketos.org"
+ arch="aarch64"
+@@ -103,7 +103,7 @@ sha512sums="
+ d8152bc08c65c19b05f917b7c967555df849b352fc45f8262ffff91f5ce72ca4225a8f1d07a283d481ec2d0c1deb60cd9907172578b27aa55651844001ef6ed5  s10-idle-blank.initd
+ e55cb17b1595cfffd58373f236501a788c4ab2ffc2967aa9a7e1dffa4b4d3dc6c02e0f8d993ec1581893f8be2801cbbfa5f4b7d7d146dae2cb97669b2349f995  s10-update
+ d135dab9c73bf9afabd99391496fcad72b93123b785fe4f4f302dbb0c8016278f81c60549d084db5331c89444d509dc8ff6d31af4c7e8d97fbe9284f0735bfb5  s10-awake
+-a5825240cf4446f90e84afe76a16cc68393dfcce66ef947eb2529fb156c6613ec2134669e210bbc969ffa0ed3a4a2604a4320a195b8f20ece8b868d1d31546f1  s10-idle-blank
++819748d8304e750ef856f1ef35060d0f807f611c6110020701acee7a256c92a3cfb38eb79626c538c42adf2b15f810828a8c592020c8a45b6bc600229c75ab88  s10-idle-blank
+ f5b670528587d518a367b66ae15fd9b5583b7ad666e03051523cf56a1b007469fc5fad535f4d22b12106042e93352b07594ec6dbc4da50766b3757d6e103f12b  s10-touch-absfix
+ 0f06787cbb28a1e53659f3fd410c219d380e17ce771dbf52810bb4a2f246cabd0fde6fba34497bc33b87b21d81d8e368a668013741dced17c84c8b20340714ca  s10-osk-start
+ 36d095a1c678b8107859007b4c34c45ffea2e07a06e6fbaed3616736f13e0e556fffecf69bce551f39fbea00073ea6a4687ea5726c7f61946918ac1849e87896  s10-term
+diff --git a/device/downstream/s10-terminal/s10-idle-blank b/device/downstream/s10-terminal/s10-idle-blank
+index 3a8fed95fa..2fe382f3de 100644
+--- a/device/downstream/s10-terminal/s10-idle-blank
++++ b/device/downstream/s10-terminal/s10-idle-blank
+@@ -15,8 +15,14 @@
+ # awake. The kernel itself refuses to suspend while Wi-Fi traffic is in flight, so an
+ # active SSH or Samba session keeps it up; a new packet from the network, a button or the
+ # clock (every 15 min, for the battery log and low-battery check) wakes it. Touch does not
+-# wake it from sleep; a button does. "0" in /etc/s10-deep-sleep turns sleep off;
+-# s10-awake <command> keeps the phone up while a long job runs.
++# wake it from sleep; a button does. Off unless /etc/s10-deep-sleep holds "1": on this
++# kernel the Wi-Fi driver can come back from a suspend without its connection (measured
++# 2026-11-07: Wi-Fi lost within an hour, and no battery gained). s10-awake <command> keeps
++# the phone up while a long job runs.
++#
++# Wi-Fi watchdog: the Broadcom driver sometimes restarts its firmware ("wl down/up") and
++# NetworkManager keeps reporting "connected" with no link and no address. Every minute,
++# if wlan0 has no link or no IPv4 address twice in a row, Wi-Fi is switched off and on.
+ import glob, os, select, struct, subprocess, time
+ 
+ IDLE = int(os.environ.get("S10_IDLE_SECONDS", "120"))
+@@ -123,7 +129,7 @@ def set_blank(off, cycle=True):
+ def suspend(seconds):
+     '''Suspend to RAM with a clock wake-up in `seconds`. Returns True once awake again;
+     False if the kernel refused (a wakeup source was active) or sleep is off or held.'''
+-    if read(SLEEP_SETTING, "1") == "0":
++    if read(SLEEP_SETTING, "0") != "1":
+         return False
+     try:
+         if os.listdir(STAY_AWAKE):
+@@ -141,6 +147,30 @@ def suspend(seconds):
+     finally:
+         write(RTC_ALARM, "0")
+ 
++wifi_bad = 0
++
++def wifi_check():
++    '''Restart Wi-Fi when it is meant to be up but has no link or no IPv4 address.'''
++    global wifi_bad
++    if read("/sys/class/net/wlan0/operstate") is None:
++        return                                 # no Wi-Fi device (yet)
++    radio = subprocess.run(["nmcli", "-t", "radio", "wifi"], capture_output=True, text=True).stdout.strip()
++    if radio != "enabled":
++        wifi_bad = 0
++        return
++    link = subprocess.run(["iw", "dev", "wlan0", "link"], capture_output=True, text=True).stdout
++    addr = subprocess.run(["ip", "-4", "-o", "addr", "show", "wlan0"], capture_output=True, text=True).stdout
++    wifi_bad = wifi_bad + 1 if ("Connected to" not in link or " inet " not in addr) else 0
++    if wifi_bad >= 2:
++        log_line("wifi: no link or address, restarting Wi-Fi")
++        run("nmcli", "radio", "wifi", "off")
++        time.sleep(3)
++        run("nmcli", "radio", "wifi", "on")
++        wifi_bad = -3                          # give it 3 more minutes to reconnect
++
++def log_line(msg):
++    print(f"{time.strftime('%Y-%m-%d %H:%M:%S')} {msg}", flush=True)
++
+ def log_power():
+     # this fuel gauge reports current_avg in mA (negative while discharging)
+     line = (f"{time.strftime('%Y-%m-%d %H:%M')} {read(BATTERY + '/capacity', '?')}% "
+@@ -165,13 +195,15 @@ os.makedirs(STAY_AWAKE, exist_ok=True)
+ os.chmod(STAY_AWAKE, 0o1777)                   # any user's s10-awake can hold it
+ fds, blanked, last, next_log = {}, False, clock(), 0
+ next_sleep = 0
++next_wifi_check = clock() + 120               # let NetworkManager connect after boot
+ dimmed = None  # brightness to restore while dimmed
+ set_blank(False, cycle=False)
+ power_saving(False)
+ while True:
+     open_inputs(fds)  # pick up hot-plugged keyboards
+     # screen off: wake rarely (input still wakes select at once)
+-    ready, _, _ = select.select(list(fds.values()), [], [], RETRY if blanked else 1)
++    sleepy = blanked and read(SLEEP_SETTING, "0") == "1"
++    ready, _, _ = select.select(list(fds.values()), [], [], (RETRY if sleepy else 60) if blanked else 1)
+     activity = power = False
+     for fd in ready:
+         try:
+@@ -225,6 +257,9 @@ while True:
+             log_power()
+             run("poweroff")
+         next_log = now + (LOG_EVERY if blanked else 300)
++    if now >= next_wifi_check:
++        wifi_check()
++        next_wifi_check = now + 60
+     if blanked and not activity and now >= next_sleep:
+         if suspend(next_log - now):
+             next_sleep = clock() + AWAKE_AFTER_WAKE
+-- 
+2.53.0
+

@@ -1,7 +1,7 @@
 From 6f0438200fa93b74b960b58c0d79c3726117e983 Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Fri, 6 Nov 2026 23:16:42 +0100
-Subject: [PATCH 42/47] s10-terminal: clean poweroff at 3% battery; power log
+Subject: [PATCH 42/50] s10-terminal: clean poweroff at 3% battery; power log
  current in mA
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

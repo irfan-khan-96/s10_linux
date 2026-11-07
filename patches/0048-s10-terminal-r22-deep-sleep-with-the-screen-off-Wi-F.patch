@@ -1,0 +1,335 @@
+From 4bfab2fb65cb1cc4b3946f14f7156b72038aff9e Mon Sep 17 00:00:00 2001
+From: khan <khan@localhost>
+Date: Sat, 7 Nov 2026 13:04:19 +0100
+Subject: [PATCH 48/50] s10-terminal r22: deep sleep with the screen off
+ (Wi-Fi, buttons and a 15-min clock wake it), s10-awake, Samba share and
+ everyday tools packaged
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ device/downstream/s10-terminal/APKBUILD       | 21 +++++--
+ device/downstream/s10-terminal/s10-awake      | 10 +++
+ device/downstream/s10-terminal/s10-idle-blank | 61 +++++++++++++++++--
+ .../s10-terminal/s10-terminal.post-install    |  8 +++
+ .../s10-terminal/s10-terminal.post-upgrade    |  8 +++
+ device/downstream/s10-terminal/s10-update     |  2 +-
+ device/downstream/s10-terminal/smb.conf       | 27 ++++++++
+ 7 files changed, 126 insertions(+), 11 deletions(-)
+ create mode 100644 device/downstream/s10-terminal/s10-awake
+ create mode 100644 device/downstream/s10-terminal/smb.conf
+
+diff --git a/device/downstream/s10-terminal/APKBUILD b/device/downstream/s10-terminal/APKBUILD
+index af3bbfe01b..44a28e08c4 100644
+--- a/device/downstream/s10-terminal/APKBUILD
++++ b/device/downstream/s10-terminal/APKBUILD
+@@ -2,7 +2,7 @@
+ # setup that turns samsung-beyond1lte-downstream into a pocket terminal.
+ pkgname=s10-terminal
+ pkgver=1
+-pkgrel=21
++pkgrel=22
+ pkgdesc="Galaxy S10 pocket terminal: fbterm + tmux, on-screen keyboard, hardening"
+ url="https://postmarketos.org"
+ arch="aarch64"
+@@ -13,12 +13,20 @@ depends="
+ 	iptables
+ 	iptables-legacy
+ 	iw
++	less
++	man-pages
++	mandoc
+ 	msm-fb-refresher
++	nano
+ 	ncurses-terminfo
+ 	neovim
+ 	py3-numpy
+ 	py3-pillow
+ 	python3
++	samba
++	samba-server-openrc
++	strace
++	tree
+ 	tmux
+ 	unudhcpd
+ 	wordgrinder
+@@ -34,12 +42,14 @@ source="
+ 	s10-osk.initd
+ 	s10-idle-blank.initd
+ 	s10-update
++	s10-awake
+ 	s10-idle-blank
+ 	s10-touch-absfix
+ 	s10-osk-start
+ 	s10-term
+ 	fbtermrc
+ 	tmux.conf
++	smb.conf
+ 	05-s10-lpm.start
+ 	10-firewall.start
+ 	20-display-on.start
+@@ -56,7 +66,7 @@ source="
+ 	"
+ 
+ package() {
+-	for f in s10-osk s10-menu s10-update s10-status s10-splash s10-idle-blank s10-touch-absfix s10-osk-start s10-term; do
++	for f in s10-osk s10-menu s10-update s10-awake s10-status s10-splash s10-idle-blank s10-touch-absfix s10-osk-start s10-term; do
+ 		install -Dm755 "$srcdir/$f" "$pkgdir/usr/bin/$f"
+ 	done
+ 	install -Dm755 "$srcdir"/s10-splash.initd "$pkgdir"/etc/init.d/s10-splash
+@@ -68,6 +78,7 @@ package() {
+ 	install -Dm644 "$srcdir"/OFL-VT323.txt "$pkgdir"/usr/share/licenses/$pkgname/OFL-VT323.txt
+ 	install -Dm644 "$srcdir"/fbtermrc "$pkgdir"/usr/share/s10-terminal/fbtermrc
+ 	install -Dm644 "$srcdir"/tmux.conf "$pkgdir"/etc/tmux.conf
++	install -Dm644 "$srcdir"/smb.conf "$pkgdir"/usr/share/s10-terminal/smb.conf
+ 	for f in 05-s10-lpm 10-firewall 20-display-on 30-usb-dhcp 40-s10-tuning 45-s10-battery; do
+ 		install -Dm755 "$srcdir/$f.start" "$pkgdir/etc/local.d/$f.start"
+ 	done
+@@ -90,13 +101,15 @@ sha512sums="
+ 5fe4dd6a2064be409b02483188d9beebd4ab3de1263a62ad2453dfa7d33dcf2494f2ff81860a8443a5db44e97a454f17f0e8b55be921ed85a28e3689c3a0ae9d  s10-splash.initd
+ 04fb5bc314ae3da0142ee8e8d592451edf924ecbcd63b4c7ba9a3659ac78500848735e27df90b2a5546d575b0b3154f996ed23dc5299cefeabff971f74f5df3c  s10-osk.initd
+ d8152bc08c65c19b05f917b7c967555df849b352fc45f8262ffff91f5ce72ca4225a8f1d07a283d481ec2d0c1deb60cd9907172578b27aa55651844001ef6ed5  s10-idle-blank.initd
+-8e7a8e29325566c876f870d85317a8375134e452f7709d6925a4bfd90321bd31545a340d19b86558c4e4636051b054a36e5fb79d6efd1cb69ea88c79eacb395f  s10-update
+-1a9addc1421ebc8e2699a2400e72ed486fdcf19b2854c15a8d829f9b4d775120c9e8ef80e4a2240d099c6e0d493b66fc9e37d957ba417652c95dd2b715333500  s10-idle-blank
++e55cb17b1595cfffd58373f236501a788c4ab2ffc2967aa9a7e1dffa4b4d3dc6c02e0f8d993ec1581893f8be2801cbbfa5f4b7d7d146dae2cb97669b2349f995  s10-update
++d135dab9c73bf9afabd99391496fcad72b93123b785fe4f4f302dbb0c8016278f81c60549d084db5331c89444d509dc8ff6d31af4c7e8d97fbe9284f0735bfb5  s10-awake
++a5825240cf4446f90e84afe76a16cc68393dfcce66ef947eb2529fb156c6613ec2134669e210bbc969ffa0ed3a4a2604a4320a195b8f20ece8b868d1d31546f1  s10-idle-blank
+ f5b670528587d518a367b66ae15fd9b5583b7ad666e03051523cf56a1b007469fc5fad535f4d22b12106042e93352b07594ec6dbc4da50766b3757d6e103f12b  s10-touch-absfix
+ 0f06787cbb28a1e53659f3fd410c219d380e17ce771dbf52810bb4a2f246cabd0fde6fba34497bc33b87b21d81d8e368a668013741dced17c84c8b20340714ca  s10-osk-start
+ 36d095a1c678b8107859007b4c34c45ffea2e07a06e6fbaed3616736f13e0e556fffecf69bce551f39fbea00073ea6a4687ea5726c7f61946918ac1849e87896  s10-term
+ 57a90c056354401584f280ba2e94483dd08dc89fbbd643626f04a1d121ddd0c6a180efb477d863ecd4b2da95325ca8576d355c4467a774c39a08f594978e2675  fbtermrc
+ fd54415383f1a8009f3dd726b40dba7dcc4a2f655ecdd6a076cce1de0ecdd2743c5c52ecf0d6b8148b24b9d7284063fd99effd4ea0fc5958073cb1b017b719af  tmux.conf
++220454760959c4c793e6996473e8937abb0064347071d7e62c0318201446d82d28884b13ff072aa2df40378331c4e6a4e411c638930781dd0a58e4ae6f7dd6a9  smb.conf
+ c433073ec72b77dbcf13882f7fd92a5915fee1fe3dd3db60fc1e966de7a694e5c63a3b0e2f30689815ae8242d26c2f8807664a9d6c1bcac9d423ff8cd0561f17  05-s10-lpm.start
+ 2925ca72c125e154331429da14c4b2d515c0cb0b023cae521326f457d098a35ff58c78b5a32e2d950eacd2cb97e086c914e20067577232243c05baf72504df78  10-firewall.start
+ 0f7f7f1b2d71ca3c5b4082b82ce36f021c96ba8c14db74a4c552b8a931133dabdfdd69628a4d1830e84f2b0b1da40a8624ea100f548f782932fad2ad49846de3  20-display-on.start
+diff --git a/device/downstream/s10-terminal/s10-awake b/device/downstream/s10-terminal/s10-awake
+new file mode 100644
+index 0000000000..2c91c5aec8
+--- /dev/null
++++ b/device/downstream/s10-terminal/s10-awake
+@@ -0,0 +1,10 @@
++#!/bin/sh
++# Keep the phone out of deep sleep while a command runs, e.g. s10-awake apk fetch ...
++# (with the screen off the phone otherwise suspends whenever the network is quiet,
++# which pauses everything until a packet, a button or the 15-minute clock wakes it).
++[ $# -gt 0 ] || { echo "usage: s10-awake <command> [args...]"; exit 2; }
++hold="/run/s10-stay-awake/$(id -un).$$"
++: > "$hold" || exit 1
++trap 'rm -f "$hold"' EXIT
++trap 'exit 130' INT TERM HUP
++"$@"
+diff --git a/device/downstream/s10-terminal/s10-idle-blank b/device/downstream/s10-terminal/s10-idle-blank
+index 9629011c20..3a8fed95fa 100644
+--- a/device/downstream/s10-terminal/s10-idle-blank
++++ b/device/downstream/s10-terminal/s10-idle-blank
+@@ -8,8 +8,15 @@
+ # While the screen is off the phone stays reachable (SSH, Samba) but saves power:
+ # the display refresher and screen-only monitors (htop, top) are paused, cores 4-7
+ # go offline, Wi-Fi power saving is on, the touch booster and tmux status polling
+-# are off. Everything is restored on wake. Battery readings are logged every 5 min
++# are off. Everything is restored on wake. Battery readings are logged every 15 min
+ # while off to /var/log/s10-power.log, to check the standby drain.
++#
++# Deep sleep: while the screen is off the phone suspends to RAM whenever nothing holds it
++# awake. The kernel itself refuses to suspend while Wi-Fi traffic is in flight, so an
++# active SSH or Samba session keeps it up; a new packet from the network, a button or the
++# clock (every 15 min, for the battery log and low-battery check) wakes it. Touch does not
++# wake it from sleep; a button does. "0" in /etc/s10-deep-sleep turns sleep off;
++# s10-awake <command> keeps the phone up while a long job runs.
+ import glob, os, select, struct, subprocess, time
+ 
+ IDLE = int(os.environ.get("S10_IDLE_SECONDS", "120"))
+@@ -27,6 +34,16 @@ BIG_CORES = (4, 5, 6, 7)                       # mid (A75) and big (M4) clusters
+ PAUSE_WHEN_OFF = ("msm-fb-refreshe", "htop", "top", "btop")
+ FREEZER = "/run/s10-freezer"
+ TMUX = ["tmux", "-S", "/tmp/tmux-10000/default"]
++SLEEP_SETTING = "/etc/s10-deep-sleep"          # "0" = never suspend
++STAY_AWAKE = "/run/s10-stay-awake"             # a file in here holds off sleep (s10-awake)
++RTC_ALARM = "/sys/class/rtc/rtc0/wakealarm"
++AWAKE_AFTER_WAKE = 5                           # s up after each wake before trying again
++RETRY = 3                                      # s between refused suspend attempts
++LOG_EVERY = 900                                # s between battery log lines while off
++
++def clock():
++    '''Seconds since boot, counting time spent asleep (time.monotonic stops in suspend).'''
++    return time.clock_gettime(time.CLOCK_BOOTTIME)
+ 
+ def read(path, default=None):
+     try:
+@@ -103,10 +120,32 @@ def set_blank(off, cycle=True):
+     with open(STATE, "w") as f:
+         f.write("1" if off else "0")
+ 
++def suspend(seconds):
++    '''Suspend to RAM with a clock wake-up in `seconds`. Returns True once awake again;
++    False if the kernel refused (a wakeup source was active) or sleep is off or held.'''
++    if read(SLEEP_SETTING, "1") == "0":
++        return False
++    try:
++        if os.listdir(STAY_AWAKE):
++            return False
++    except OSError:
++        pass
++    write(RTC_ALARM, "0")
++    write(RTC_ALARM, f"+{max(int(seconds), 30)}")
++    try:
++        with open("/sys/power/state", "w") as f:
++            f.write("mem")
++        return True
++    except OSError:
++        return False
++    finally:
++        write(RTC_ALARM, "0")
++
+ def log_power():
+     # this fuel gauge reports current_avg in mA (negative while discharging)
+     line = (f"{time.strftime('%Y-%m-%d %H:%M')} {read(BATTERY + '/capacity', '?')}% "
+-            f"{read(BATTERY + '/status', '?')} avg {read(BATTERY + '/current_avg', '?')} mA\n")
++            f"{read(BATTERY + '/status', '?')} avg {read(BATTERY + '/current_avg', '?')} mA"
++            f" sleeps {read('/sys/power/suspend_stats/success', '?')}\n")
+     try:
+         lines = open(POWER_LOG).readlines()[-2000:] if os.path.exists(POWER_LOG) else []
+         with open(POWER_LOG, "w") as f:
+@@ -122,14 +161,17 @@ def open_inputs(fds):
+             except OSError:
+                 pass
+ 
+-fds, blanked, last, next_log = {}, False, time.monotonic(), 0
++os.makedirs(STAY_AWAKE, exist_ok=True)
++os.chmod(STAY_AWAKE, 0o1777)                   # any user's s10-awake can hold it
++fds, blanked, last, next_log = {}, False, clock(), 0
++next_sleep = 0
+ dimmed = None  # brightness to restore while dimmed
+ set_blank(False, cycle=False)
+ power_saving(False)
+ while True:
+     open_inputs(fds)  # pick up hot-plugged keyboards
+     # screen off: wake rarely (input still wakes select at once)
+-    ready, _, _ = select.select(list(fds.values()), [], [], 60 if blanked else 1)
++    ready, _, _ = select.select(list(fds.values()), [], [], RETRY if blanked else 1)
+     activity = power = False
+     for fd in ready:
+         try:
+@@ -146,7 +188,7 @@ while True:
+                 power = power or value == 1    # press only; its release is not activity
+             elif etype in (EV_KEY, EV_REL, EV_ABS):
+                 activity = True
+-    now = time.monotonic()
++    now = clock()
+     if power and blanked:
+         activity = True                        # power button wakes like any key
+     if power and not blanked:                  # power button: screen off now
+@@ -154,6 +196,7 @@ while True:
+         power_saving(True)
+         blanked = True
+         next_log = now
++        next_sleep = now + 10
+     elif activity:
+         last = now
+         if blanked:
+@@ -168,6 +211,7 @@ while True:
+         power_saving(True)
+         blanked = True
+         next_log = now
++        next_sleep = now + 10
+     elif not blanked and dimmed is None and now - last >= IDLE - DIM:
+         dimmed = backlight()
+         if dimmed is not None:
+@@ -180,4 +224,9 @@ while True:
+         if read(BATTERY + "/status") == "Discharging" and cap.isdigit() and int(cap) <= LOW_BATTERY:
+             log_power()
+             run("poweroff")
+-        next_log = now + 300
++        next_log = now + (LOG_EVERY if blanked else 300)
++    if blanked and not activity and now >= next_sleep:
++        if suspend(next_log - now):
++            next_sleep = clock() + AWAKE_AFTER_WAKE
++        else:
++            next_sleep = clock() + RETRY
+diff --git a/device/downstream/s10-terminal/s10-terminal.post-install b/device/downstream/s10-terminal/s10-terminal.post-install
+index a5764fcc13..2f8398b8ff 100644
+--- a/device/downstream/s10-terminal/s10-terminal.post-install
++++ b/device/downstream/s10-terminal/s10-terminal.post-install
+@@ -16,6 +16,14 @@ if [ -n "$user" ]; then
+ 	# no logins on tty2-6: nothing displays them, and switching there leaves fbterm without input
+ 	sed -i "s|^tty[2-6]::|#&|" /etc/inittab
+ 	kill -HUP 1 2>/dev/null
++	# home file share: our config (the stock one stays as smb.conf.orig), its folder, the
++	# service. The Samba password is set by hand once: sudo smbpasswd -a <user>
++	if ! grep -q "S10 home file share" /etc/samba/smb.conf 2>/dev/null; then
++		[ -f /etc/samba/smb.conf ] && [ ! -f /etc/samba/smb.conf.orig ] && cp /etc/samba/smb.conf /etc/samba/smb.conf.orig
++		sed "s/@USER@/$user/g" /usr/share/s10-terminal/smb.conf > /etc/samba/smb.conf
++	fi
++	install -d -o "$user" -g "$user" "/home/$user/share"
++	rc-update -q add samba default
+ fi
+ rc-update -q del s10-syncthing default 2>/dev/null
+ fc-cache -f /usr/share/fonts/s10-vt >/dev/null 2>&1
+diff --git a/device/downstream/s10-terminal/s10-terminal.post-upgrade b/device/downstream/s10-terminal/s10-terminal.post-upgrade
+index a5764fcc13..2f8398b8ff 100644
+--- a/device/downstream/s10-terminal/s10-terminal.post-upgrade
++++ b/device/downstream/s10-terminal/s10-terminal.post-upgrade
+@@ -16,6 +16,14 @@ if [ -n "$user" ]; then
+ 	# no logins on tty2-6: nothing displays them, and switching there leaves fbterm without input
+ 	sed -i "s|^tty[2-6]::|#&|" /etc/inittab
+ 	kill -HUP 1 2>/dev/null
++	# home file share: our config (the stock one stays as smb.conf.orig), its folder, the
++	# service. The Samba password is set by hand once: sudo smbpasswd -a <user>
++	if ! grep -q "S10 home file share" /etc/samba/smb.conf 2>/dev/null; then
++		[ -f /etc/samba/smb.conf ] && [ ! -f /etc/samba/smb.conf.orig ] && cp /etc/samba/smb.conf /etc/samba/smb.conf.orig
++		sed "s/@USER@/$user/g" /usr/share/s10-terminal/smb.conf > /etc/samba/smb.conf
++	fi
++	install -d -o "$user" -g "$user" "/home/$user/share"
++	rc-update -q add samba default
+ fi
+ rc-update -q del s10-syncthing default 2>/dev/null
+ fc-cache -f /usr/share/fonts/s10-vt >/dev/null 2>&1
+diff --git a/device/downstream/s10-terminal/s10-update b/device/downstream/s10-terminal/s10-update
+index dc6890761e..2d163c619b 100644
+--- a/device/downstream/s10-terminal/s10-update
++++ b/device/downstream/s10-terminal/s10-update
+@@ -34,7 +34,7 @@ ok() { echo "    ok   $1"; }
+ bad() { echo "    FIX  $1"; }
+ grep -q '^tty1::respawn:.*s10-term' /etc/inittab && ok "terminal on tty1" || bad "tty1 line in /etc/inittab (reinstall s10-terminal)"
+ grep -q '^tty[2-6]::' /etc/inittab && bad "logins on tty2-6 came back (reinstall s10-terminal)" || ok "no logins on tty2-6"
+-for s in s10-osk s10-idle-blank msm-fb-refresher sshd networkmanager; do
++for s in s10-osk s10-idle-blank msm-fb-refresher sshd networkmanager samba; do
+ 	rc-service -q "$s" status >/dev/null 2>&1 && ok "$s running" || bad "$s not running: rc-service $s start"
+ done
+ [ -e /etc/ssh/sshd_config.d/10-hardening.conf ] && ok "SSH hardening in place" || bad "SSH hardening missing"
+diff --git a/device/downstream/s10-terminal/smb.conf b/device/downstream/s10-terminal/smb.conf
+new file mode 100644
+index 0000000000..55285f984f
+--- /dev/null
++++ b/device/downstream/s10-terminal/smb.conf
+@@ -0,0 +1,27 @@
++# S10 home file share, installed by s10-terminal (the phone user's name is filled in).
++# Home network only: bound to Wi-Fi and loopback, 192.168.178.x clients, SMB2+, no guests.
++# The firewall (10-firewall.start) also limits port 445 to the home network.
++[global]
++	server role = standalone server
++	workgroup = WORKGROUP
++	server string = Galaxy S10
++	# home network and loopback only; SMB2+ only, no NetBIOS
++	interfaces = lo wlan0
++	bind interfaces only = yes
++	hosts allow = 127. 192.168.178.
++	server min protocol = SMB2_10
++	disable netbios = yes
++	smb ports = 445
++	map to guest = never
++	restrict anonymous = 2
++	load printers = no
++	printing = bsd
++	printcap name = /dev/null
++
++[s10]
++	path = /home/@USER@/share
++	valid users = @USER@
++	read only = no
++	browseable = yes
++	create mask = 0644
++	directory mask = 0755
+-- 
+2.53.0
+

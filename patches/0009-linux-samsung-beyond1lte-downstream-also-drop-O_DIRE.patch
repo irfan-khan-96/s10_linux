@@ -1,7 +1,7 @@
 From 842c93158b766efb465858db0a88c93653b26769 Mon Sep 17 00:00:00 2001
 From: khan <khan@localhost>
 Date: Sat, 31 Oct 2026 12:23:58 +0100
-Subject: [PATCH 09/47] linux-samsung-beyond1lte-downstream: also drop O_DIRECT
+Subject: [PATCH 09/50] linux-samsung-beyond1lte-downstream: also drop O_DIRECT
  when loop refuses direct I/O
 
 ---
