@@ -8,20 +8,14 @@ import curses, datetime, os, socket, subprocess
 HOME = os.path.expanduser("~")
 
 def journal_path():
-    return f"{HOME}/journal/{datetime.date.today():%Y-%m-%d}.md"
-
-def notes():
-    os.makedirs(f"{HOME}/notes", exist_ok=True)
-    return f"cd {HOME}/notes && nvim ."
+    return f"{HOME}/notes/journal/{datetime.date.today():%Y-%m-%d}.md"
 
 ITEMS = [  # key, label, window name, command (str, or function returning one)
-    ("1", "notes",   "notes",   notes),
-    ("2", "journal", "journal", "s10-write"),          # writing mode: today's entry
-    ("3", "write",   "write",   "s10-write --last"),   # writing mode: the last piece
-    ("4", "shell",   None,      None),          # always a new shell window
-    ("5", "system",  "system",  "htop"),
-    ("6", "wi-fi",   "wifi",    "sudo nmtui"),
-    ("7", "power",   None,      "power"),
+    ("1", "write",   "write",   "s10-write"),   # notes and journal: start screen
+    ("2", "shell",   None,      None),          # always a new shell window
+    ("3", "system",  "system",  "htop"),
+    ("4", "wi-fi",   "wifi",    "sudo nmtui"),
+    ("5", "power",   None,      "power"),
 ]
 
 # 3x5 block digits for the clock, each cell drawn two columns wide

@@ -1,29 +1,25 @@
 #!/bin/sh
-# Distraction-free writing in Neovim (setup in /usr/share/s10-terminal/write.lua).
-#   s10-write            today's journal entry (~/journal/YYYY-MM-DD.md, dated heading if new)
-#   s10-write --last     the file last opened here, else a new note in ~/notes
+# Writing: one place for notes and the journal, in distraction-free Neovim
+# (setup in /usr/share/s10-terminal/write.lua). Everything lives in ~/notes,
+# the journal in ~/notes/journal (one file per day).
+#   s10-write            start screen: today's journal, new note, search, recent pieces
+#   s10-write today      today's journal entry
 #   s10-write <file>     any file
-# Inside: Space s spell check, Space c centred column, Space w word count; autosaves.
-state="${XDG_STATE_HOME:-$HOME/.local/state}/s10-write"
-mkdir -p "$state"
+notes="$HOME/notes"
+mkdir -p "$notes/journal"
+# one-time move of the old ~/journal folder (never overwrites a file already there)
+if [ -d "$HOME/journal" ]; then
+	for f in "$HOME/journal"/* "$HOME/journal"/.[!.]*; do
+		[ -e "$f" ] || continue
+		[ -e "$notes/journal/${f##*/}" ] || mv "$f" "$notes/journal/"
+	done
+	rmdir "$HOME/journal" 2>/dev/null
+fi
+# NVIM_APPNAME: its own undo, swap and history, apart from the normal Neovim
+export NVIM_APPNAME=s10-write
+init=/usr/share/s10-terminal/write.lua
 case "$1" in
-"")
-	mkdir -p "$HOME/journal"
-	f="$HOME/journal/$(date +%F).md"
-	[ -e "$f" ] || printf '# %s\n\n' "$(date '+%A %d %B %Y')" > "$f"
-	;;
---last)
-	f="$(cat "$state/last" 2>/dev/null)"
-	if [ -z "$f" ] || [ ! -e "$f" ]; then
-		mkdir -p "$HOME/notes"
-		f="$HOME/notes/$(date +%F-%H%M).md"
-	fi
-	;;
-*)
-	f="$1"
-	;;
+"")     exec nvim -u "$init" ;;
+today)  exec nvim -u "$init" -c 'lua vim.g.s10_today = 1; S10Today()' ;;
+*)      exec nvim -u "$init" '+normal! G$' "$1" ;;
 esac
-case "$f" in /*) ;; *) f="$PWD/$f" ;; esac
-printf '%s\n' "$f" > "$state/last"
-# its own undo/swap/shada (NVIM_APPNAME), start at the end of the text
-NVIM_APPNAME=s10-write exec nvim -u /usr/share/s10-terminal/write.lua '+normal! G$' "$f"

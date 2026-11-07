@@ -1,7 +1,10 @@
 -- s10-write: distraction-free writing in Neovim on the S10 terminal (amber, offline, no plugins).
 -- Loaded with `nvim -u` by s10-write, so the normal Neovim setup is untouched.
--- Space s: spell check on/off    Space c: centred column on/off    Space w: word count
+-- Start screen: t today's journal, n new note, / search, 1-9 recent pieces, q quit.
+-- While writing: Space h back to the start screen, Space s spell check on/off,
+-- Space c centred column on/off, Space w word count.
 -- Text autosaves when you stop typing, leave insert mode or switch away; :q leaves.
+-- All writing lives in ~/notes, the journal in ~/notes/journal (one file per day).
 
 local o, opt = vim.o, vim.opt
 local COLUMN = 72                       -- text width when the screen is wide enough to centre
@@ -78,6 +81,8 @@ vim.api.nvim_create_autocmd("ColorScheme", { callback = colours })
 local words = 0
 local function count() words = vim.fn.wordcount().words end
 _G.S10Status = function()
+  if vim.b.s10_start then return "  write  ·  ~/notes" end
+  if vim.bo.buftype == "quickfix" then return "  search results  ·  Enter opens" end
   local name = vim.fn.expand("%:t")
   if name == "" then name = "untitled" end
   local state = vim.bo.modified and "unsaved" or "saved"
@@ -145,3 +150,134 @@ map("n", "<leader>w", function()
   local wc = vim.fn.wordcount()
   print(string.format("%d words, %d characters", wc.words, wc.chars))
 end, { desc = "word count" })
+
+-- one place for all writing: start screen, today's journal, new notes, search, recent pieces
+local NOTES = vim.fn.expand("~/notes")
+local JOURNAL = NOTES .. "/journal"
+local spell_on = true
+
+local function open(path)
+  vim.cmd.edit(vim.fn.fnameescape(path))
+  vim.wo.spell = spell_on
+  vim.cmd("normal! G$")
+end
+
+_G.S10Today = function()
+  vim.fn.mkdir(JOURNAL, "p")
+  local path = JOURNAL .. "/" .. os.date("%Y-%m-%d") .. ".md"
+  if vim.fn.filereadable(path) == 0 then
+    vim.fn.writefile({ "# " .. os.date("%A %d %B %Y"), "" }, path)
+  end
+  open(path)
+end
+
+local function slug(title)
+  local s = title:lower():gsub("[^%w]+", "-"):gsub("^%-+", ""):gsub("%-+$", "")
+  return s:sub(1, 50)
+end
+
+local function new_note()
+  vim.ui.input({ prompt = "Title: " }, function(title)
+    if not title or title:match("^%s*$") then return end
+    local base = slug(title)
+    if base == "" then base = os.date("%Y-%m-%d-%H%M") end
+    local path, n = NOTES .. "/" .. base .. ".md", 2
+    while vim.fn.filereadable(path) == 1 do
+      path, n = NOTES .. "/" .. base .. "-" .. n .. ".md", n + 1
+    end
+    vim.fn.mkdir(NOTES, "p")
+    vim.fn.writefile({ "# " .. title, "" }, path)
+    open(path)
+  end)
+end
+
+local function search()
+  vim.ui.input({ prompt = "Search: " }, function(q)
+    if not q or q == "" then return end
+    vim.fn.setqflist({})
+    vim.cmd("silent! vimgrep /\\c\\V" .. vim.fn.escape(q, "/\\") .. "/j " .. vim.fn.fnameescape(NOTES) .. "/**/*.md")
+    if #vim.fn.getqflist() == 0 then
+      vim.notify("nothing found for " .. q)
+      return
+    end
+    vim.cmd("botright copen")
+  end)
+end
+vim.api.nvim_create_autocmd("FileType", {          -- search results: Enter opens and closes the list
+  pattern = "qf",
+  callback = function(ev)
+    vim.wo.spell = false
+    vim.keymap.set("n", "<CR>", "<CR><Cmd>cclose<CR><Cmd>lua vim.wo.spell = " .. tostring(spell_on) .. "<CR>",
+      { buffer = ev.buf })
+    vim.keymap.set("n", "q", "<Cmd>cclose<CR>", { buffer = ev.buf })
+  end,
+})
+
+local function title_of(path)
+  local first = vim.fn.readfile(path, "", 1)[1] or ""
+  local t = first:match("^#+%s*(.+)")
+  return t or vim.fn.fnamemodify(path, ":t:r")
+end
+
+local function recent(n)
+  local files = vim.fn.globpath(NOTES, "**/*.md", false, true)
+  table.sort(files, function(a, b) return vim.fn.getftime(a) > vim.fn.getftime(b) end)
+  return vim.list_slice(files, 1, n)
+end
+
+_G.S10Start = function()
+  local files = recent(9)
+  local width = math.min(o.columns, COLUMN) - 18
+  local lines = { "", "  WRITE", "",
+    "  t  today's journal   " .. os.date("%A %d %B"),
+    "  n  new note",
+    "  /  search all writing", "", "  recent" }
+  for i, f in ipairs(files) do
+    local where = f:sub(#JOURNAL + 1, #JOURNAL + 1) == "/" and f:sub(1, #JOURNAL) == JOURNAL and "journal" or "notes"
+    local title = title_of(f)
+    if #title > width then title = title:sub(1, width - 1) .. "…" end
+    lines[#lines + 1] = string.format("  %d  %-" .. width .. "s %s", i, title, where)
+  end
+  if #files == 0 then lines[#lines + 1] = "     nothing yet" end
+  lines[#lines + 1] = ""
+  lines[#lines + 1] = "  q  quit"
+
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.bo[buf].bufhidden = "wipe"
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  vim.bo[buf].modifiable = false
+  vim.b[buf].s10_start = true
+  vim.api.nvim_win_set_buf(0, buf)
+  vim.wo.spell = false
+  vim.api.nvim_win_set_cursor(0, { 4, 2 })
+  local function key(lhs, fn) vim.keymap.set("n", lhs, fn, { buffer = buf, nowait = true }) end
+  key("t", S10Today)
+  key("n", new_note)
+  key("/", search)
+  key("q", function() vim.cmd("qa") end)
+  for i, f in ipairs(files) do key(tostring(i), function() open(f) end) end
+  key("<CR>", function()                             -- Enter on a line does what its key does
+    local l = vim.api.nvim_get_current_line():match("^%s+(%S+)")
+    if l == "t" then S10Today() elseif l == "n" then new_note() elseif l == "/" then search()
+    elseif l == "q" then vim.cmd("qa") elseif tonumber(l) and files[tonumber(l)] then open(files[tonumber(l)]) end
+  end)
+  local ns = vim.api.nvim_create_namespace("s10-start")
+  local function paint(row, col, group)
+    vim.api.nvim_buf_set_extmark(buf, ns, row, col, { end_row = row, end_col = #lines[row + 1], hl_group = group })
+  end
+  paint(1, 0, "Title")                               -- WRITE
+  paint(7, 0, "Comment")                             -- recent
+  for i = 1, #files do                               -- where each piece lives, dimmed
+    paint(7 + i, #lines[8 + i] - #(lines[8 + i]:match("%S+$")), "Comment")
+  end
+end
+
+map("n", "<leader>h", function() vim.cmd("silent! update"); S10Start() end, { desc = "start screen" })
+map("n", "<leader>s", function() spell_on = not spell_on; vim.wo.spell = spell_on end, { desc = "spell check on/off" })
+
+-- no file given: the start screen
+vim.api.nvim_create_autocmd("VimEnter", {
+  callback = function()
+    if vim.fn.argc() == 0 and not vim.g.s10_today then S10Start() end
+  end,
+})
